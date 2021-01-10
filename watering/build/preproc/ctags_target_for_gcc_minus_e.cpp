@@ -688,18 +688,16 @@ void readQuadrature()
                     currentItem++;
                 break;
             }
-            currentItem++;
+
         }
 
         if (digitalRead(2) && flag == 0)
-        {Serial.println("OK!");
+        {
             if (currentItem == 1)
             {
                 currentItem = 1;
-                 Serial.println("1!");
             }
             else{
-                 Serial.println("--!");
                 currentItem--;
             }
 

@@ -289,7 +289,7 @@ void drawHomePage();
 void buttonPressed();
 #line 613 "f:\\WaterArduino\\watering\\watering.ino"
 void readQuadrature();
-#line 711 "f:\\WaterArduino\\watering\\watering.ino"
+#line 709 "f:\\WaterArduino\\watering\\watering.ino"
 void restMenuData();
 #line 278 "f:\\WaterArduino\\watering\\watering.ino"
 void setup()
@@ -694,18 +694,16 @@ void readQuadrature()
                     currentItem++;
                 break;
             }
-            currentItem++;
+            
         }
 
         if (digitalRead(B) && flag == 0)
-        {Serial.println("OK!");
+        {
             if (currentItem == 1)
             {
                 currentItem = 1;
-                 Serial.println("1!");
             }
             else{
-                 Serial.println("--!");
                 currentItem--;
             }
             

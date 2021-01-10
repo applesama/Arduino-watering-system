@@ -617,7 +617,8 @@ void readQuadrature()
     {
 
         flag = 0;
-        if (digitalRead(B)){
+        if (digitalRead(B))
+        {
             flag = 1;
         }
         int_nu = 1;
@@ -677,21 +678,18 @@ void readQuadrature()
                     currentItem++;
                 break;
             }
-            currentItem++;
         }
 
         if (digitalRead(B) && flag == 0)
-        {Serial.println("OK!");
+        {
             if (currentItem == 1)
             {
                 currentItem = 1;
-                 Serial.println("1!");
             }
-            else{
-                 Serial.println("--!");
+            else
+            {
                 currentItem--;
             }
-            
         }
         if (enterMenu == false) //if not enter the menu, then enter it
         {
@@ -699,13 +697,6 @@ void readQuadrature()
             restMenuData();
         }
         int_nu = 0;
-        Serial.println("CurrentItem");
-        Serial.println(currentItem);
-        Serial.println("CurrentMenu");
-        Serial.println(currentMenu);
-        Serial.println("flag");
-        Serial.println(flag);
-        Serial.println("");
     }
 }
 void restMenuData()
