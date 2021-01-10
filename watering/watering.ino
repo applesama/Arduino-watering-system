@@ -261,12 +261,12 @@ PlantSensor::~PlantSensor()
 vector<PlantSensor> sensors;
 
 bool enterMenu = false; //if enter the menu
-const char *mainMenuItem[4] = {"Manual Watering", "Auto-Watering setting", "Record", "Back"};
-const char *menuItemFor6[5] = {"UpperTemputerture", "LowerTemputerture", "UpperHumidity", "LowerHumidity", "Back"};
+const char *mainMenuItem[3] = {"Manual watering", "Auto-Watering settings", "Sensor records"};
+const char *menuItemFor6[4] = {"UpperTemputerture", "LowerTemputerture", "UpperHumidity", "LowerHumidity"};
 
 uint8_t currentMenu = 1; //different number reprensent different menu interface; 1:main menu 2:manual watering 3:record 4:record for each sensor 5:setting 6:setting for differnet sensor
 uint8_t currentPage = 1;
-uint8_t currentItem = 1;
+uint8_t currentItem = 0;
 uint8_t currentItemForLastPage = 1; //record which item selected in last item;
 
 uint8_t sensorThatCurrentHave = 0; //how many sensor we have
@@ -308,11 +308,8 @@ void loop()
         }
         else
         {
-            /*switch (currentMenu)
-                { //different number reprensent different menu interface; 1:main menu 2:manual watering 3:record 4:record for each sensor 5:setting 6:setting for differnet sensor7:adjust menu
-                case 1:
-                }*/
-            // drawMenu();
+
+            drawMenu();
         }
 
     } while (u8g2.nextPage());
@@ -322,21 +319,24 @@ void loop()
 
 void drawMenu()
 {
-    vector<char> items; //used to store how many items in a menu
+    vector<char*> items; //used to store how many items in a menu
     uint8_t i, h;
     u8g2_uint_t w, d;
 
     u8g2.setFont(u8g_font_6x13);
     u8g2.setFontRefHeightText();
     u8g2.setFontPosTop(); //以左上角为坐标原点
-
-    h = u8g2.getAscent() - u8g2.getDescent(); //height of
+    u8g2.drawLine(u8g2.getDisplayWidth(), 15, 0, 15);   //a horizontal line
+    h = u8g2.getAscent() - u8g2.getDescent(); //height of fonts
     w = u8g2.getDisplayWidth();
+
+    u8g2.drawStr((u8g2.getDisplayWidth() / 2) - ((u8g2.getStrWidth("Main Menu") / 2)), 1, "Main Menu");
+    
 
     switch (currentMenu)
     {
     case 1:
-        for (int n = 0; n < 4; n++)
+        for (int n = 0; n < 3; n++)
         {
             items.push_back(mainMenuItem[n]);
         }
@@ -399,10 +399,10 @@ void drawMenu()
             //u8g2.setDefaultForegroundColor();
             if (i == currentItem)
             {
-                u8g2.drawFrame(0, i * h + 16, w, h);
+                u8g2.drawFrame(0, i * h + 17, w, h);
                 //u8g2.setDefaultBackgroundColor();
             }
-            u8g2.setCursor(d, i * h + 16);
+            u8g2.setCursor(d, i * h + 18);
             u8g2.print(items[i]);
         }
     }
@@ -612,7 +612,6 @@ void buttonPressed()
 }
 void readQuadrature()
 {
-    //Serial.println("Rotated!");
     if (int_nu == 0 && digitalRead(A) == LOW)
     {
 
@@ -630,8 +629,8 @@ void readQuadrature()
             switch (currentMenu)
             {       //different number reprensent different menu interface; 1:main menu 2:manual watering 3:record 4:record for each sensor 5:setting 6:setting for differnet sensor 7:adjust menu
             case 1: //main menu
-                if (currentItem == 4)
-                    currentItem = 4;
+                if (currentItem == 3)
+                    currentItem = 3;
                 else
                     currentItem++;
                 break;
@@ -651,8 +650,8 @@ void readQuadrature()
                 break;
 
             case 4: //record menu for each sensor
-                if (currentItem == 2)
-                    currentItem = 2;
+                if (currentItem == 1)
+                    currentItem = 1;
                 else
                     currentItem++;
                 break;
@@ -665,8 +664,8 @@ void readQuadrature()
                 break;
 
             case 6:
-                if (currentItem == 5)
-                    currentItem = 5;
+                if (currentItem == 4)
+                    currentItem = 4;
                 else
                     currentItem++;
                 break;
@@ -682,9 +681,9 @@ void readQuadrature()
 
         if (digitalRead(B) && flag == 0)
         {
-            if (currentItem == 1)
+            if (currentItem == 0)
             {
-                currentItem = 1;
+                currentItem = 0;
             }
             else
             {
@@ -698,11 +697,16 @@ void readQuadrature()
         }
         int_nu = 0;
     }
+    Serial.print("Item: ");
+    Serial.println(currentItem);
+    Serial.print("Menu: ");
+    Serial.println(currentMenu);
+    Serial.println("--------");
 }
 void restMenuData()
 {
     currentMenu = 1; //different number reprensent different menu interface; 1:main menu 2:manual watering 3:record 4:record for each sensor 5:setting 6:setting for differnet sensor
     currentPage = 1;
-    currentItem = 1;
+    currentItem = 0;
     currentItemForLastPage = 1;
 }
