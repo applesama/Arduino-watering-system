@@ -285,13 +285,12 @@ uint8_t flag = 0;
 void setup()
 {
     Serial.begin(9600);
-    pinMode(5 /*define the pin2 is the airTempHumidity sensor*/, 0x1); //to send data to DHT11 for hand shaking, so using output
     pinMode(3 /*has been changed with B, if any bugs appear with encoder, check this*/, 0x0); //for encoder A pin and B pin
     pinMode(2, 0x0);
-    pinMode(5, 0x0); //for te switch on encoder
+    pinMode(18, 0x2); //for te switch on encoder
     //attachInterrupt(1, readQuadrature, CHANGE);
     attachInterrupt(0, readQuadrature, 1);
-    //attachInterrupt(5, buttonPressed, CHANGE); //switch
+    attachInterrupt(5, buttonPressed, 0x0); //switch
     u8g2.begin();
     for (int i = 0; i < 4; i++)
     { //for test
@@ -316,7 +315,7 @@ void loop()
         else
         {
 
-            drawMenu();
+            //drawMenu();
         }
 
     } while (u8g2.nextPage());
@@ -498,7 +497,7 @@ void drawHomePage()
 
 void buttonPressed()
 {
-    //Serial.println("Pressed!");
+    Serial.println("Pressed!");
     if (enterMenu == false) //if not enter the menu, then enter it
     {
         enterMenu = true;

@@ -279,29 +279,28 @@ uint8_t flag = 0;
 //part of the variables are still public for debug, set
 #line 278 "f:\\WaterArduino\\watering\\watering.ino"
 void setup();
-#line 296 "f:\\WaterArduino\\watering\\watering.ino"
+#line 295 "f:\\WaterArduino\\watering\\watering.ino"
 void loop();
-#line 320 "f:\\WaterArduino\\watering\\watering.ino"
+#line 319 "f:\\WaterArduino\\watering\\watering.ino"
 void drawMenu();
-#line 411 "f:\\WaterArduino\\watering\\watering.ino"
+#line 410 "f:\\WaterArduino\\watering\\watering.ino"
 void drawHomePage();
-#line 492 "f:\\WaterArduino\\watering\\watering.ino"
+#line 491 "f:\\WaterArduino\\watering\\watering.ino"
 void buttonPressed();
-#line 613 "f:\\WaterArduino\\watering\\watering.ino"
+#line 612 "f:\\WaterArduino\\watering\\watering.ino"
 void readQuadrature();
-#line 706 "f:\\WaterArduino\\watering\\watering.ino"
+#line 705 "f:\\WaterArduino\\watering\\watering.ino"
 void restMenuData();
 #line 278 "f:\\WaterArduino\\watering\\watering.ino"
 void setup()
 {
     Serial.begin(9600);
-    pinMode(DHT11PIN, OUTPUT); //to send data to DHT11 for hand shaking, so using output
     pinMode(A, INPUT);         //for encoder A pin and B pin
     pinMode(B, INPUT);
-    pinMode(5, INPUT); //for te switch on encoder
+    pinMode(C, INPUT_PULLUP); //for te switch on encoder
     //attachInterrupt(1, readQuadrature, CHANGE);
     attachInterrupt(0, readQuadrature, CHANGE);
-    //attachInterrupt(5, buttonPressed, CHANGE); //switch
+    attachInterrupt(5, buttonPressed, LOW); //switch
     u8g2.begin();
     for (int i = 0; i < 4; i++)
     { //for test
@@ -326,7 +325,7 @@ void loop()
         else
         {
 
-            drawMenu();
+            //drawMenu();
         }
 
     } while (u8g2.nextPage());
@@ -508,7 +507,7 @@ void drawHomePage()
 
 void buttonPressed()
 {
-    //Serial.println("Pressed!");
+    Serial.println("Pressed!");
     if (enterMenu == false) //if not enter the menu, then enter it
     {
         enterMenu = true;
