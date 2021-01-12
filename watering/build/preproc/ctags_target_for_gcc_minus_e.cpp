@@ -284,8 +284,8 @@ uint8_t int_nu = 0; //for rotary encoder
 uint8_t flag = 0;
 
 long lastDebounceTime = 0;
-long debounceDelay = 20;
 bool debounce = true;
+
 void setup()
 {
     Serial.begin(9600);
@@ -306,7 +306,7 @@ void setup()
 
 void loop()
 {
-    if(lastDebounceTime > 20) debounce = true;
+    if(lastDebounceTime > 50) debounce = true;
 
     if (enterMenu)
         //Serial.println("yes");
