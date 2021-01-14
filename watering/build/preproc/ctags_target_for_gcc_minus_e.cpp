@@ -271,12 +271,12 @@ vector<PlantSensor> sensors;
 
 bool enterMenu = false; //if enter the menu
 const char *mainMenuItem[3] = {"Manual watering", "Auto-Watering settings", "Sensor records"};
-const char *menuItemFor6[4] = {"UpperTemputerture", "LowerTemputerture", "UpperHumidity", "LowerHumidity"};
+const char *menuItemFor5[4] = {"UpperTemputerture", "LowerTemputerture", "UpperHumidity", "LowerHumidity"};
 
-uint8_t currentMenu = 1; //different number reprensent different menu interface; 1:main menu 2:manual watering 3:record 4:record for each sensor 5:setting 6:setting for differnet sensor
-uint8_t currentPage = 1;
+uint8_t currentMenu = 0; //different number reprensent different menu interface; 1:main menu 2:manual watering 3:record 4:record for each sensor 5:setting 6:setting for differnet sensor
+uint8_t currentPage = 0;
 uint8_t currentItem = 0;
-uint8_t currentItemForLastPage = 1; //record which item selected in last item;
+uint8_t currentItemForLastPage = 0; //record which item selected in last item;
 
 uint8_t sensorThatCurrentHave = 0; //how many sensor we have
 
@@ -294,7 +294,7 @@ void setup()
     pinMode(18, 0x2); //for te switch on encoder
     //attachInterrupt(1, readQuadrature, CHANGE);
     attachInterrupt(0, readQuadrature, 1);
-    attachInterrupt(5, buttonPressed, 0x0); //switch
+    //attachInterrupt(5, buttonPressed, LOW); //switch
     u8g2.begin();
     for (int i = 0; i < 4; i++)
     { //for test
@@ -309,9 +309,6 @@ void loop()
     if(lastDebounceTime > 50) debounce = true;
 
     if (enterMenu)
-        //Serial.println("yes");
-        //Serial.println(currentItem);
-        //Serial.println(currentMenu);
         u8g2.firstPage();
     do
     {
@@ -321,7 +318,6 @@ void loop()
         }
         else
         {
-
             //drawMenu();
         }
 
@@ -347,53 +343,53 @@ void drawMenu()
 
     switch (currentMenu)
     {
-    case 1:
+    case 0:
         for (int n = 0; n < 3; n++)
         {
             items.push_back(mainMenuItem[n]);
         }
         items.push_back("Back");
         break;
+    case 1:
+        for (int n = 0; n < sensors.size(); n++)
+        {
+            items.push_back(sensors[n].getName());
+        }
+        items.push_back("Back");
+        break;
     case 2:
-        for (int n = 0; n < 4; n++)
+        for (int n = 0; n < sensors.size(); n++)
         {
             items.push_back(sensors[n].getName());
         }
         items.push_back("Back");
         break;
     case 3:
-        for (int n = 0; n < 4; n++)
-        {
-            items.push_back(sensors[n].getName());
-        }
-        items.push_back("Back");
-        break;
-    case 4:
-        for (int n = 0; n < 4; n++)
+        for (int n = 0; n < sensors.size(); n++)
         {
             items.push_back(sensors[n].getName()); //temperaly is just get names, will be change to get date
         }
         items.push_back("Back");
         break;
 
-    case 5:
-        for (int n = 0; n < 4; n++)
+    case 4:
+        for (int n = 0; n < sensors.size(); n++)
         {
             items.push_back(sensors[n].getName());
         }
         items.push_back("Back");
         break;
 
-    case 6:
-        for (int n = 0; n < 4; n++)
+    case 5:
+        for (int n = 0; n < sensors.size(); n++)
         {
-            items.push_back(menuItemFor6[n]);
+            items.push_back(menuItemFor5[n]);
         }
         items.push_back("Back");
         break;
     }
 
-    if (currentMenu == 7)
+    if (currentMenu == 6)
     {
         u8g2.setFont(u8g2_font_unifont_t_symbols); //set fonts
         u8g2.drawGlyph(48, 40, 0x23f5);
@@ -517,109 +513,110 @@ void buttonPressed()
         {
             switch (currentMenu)
             { //different number reprensent different menu interface; 1:main menu 2:manual watering 3:record 4:record for each sensor 5:setting 6:setting for differnet sensor 7:adjust menu
-            case 1: //main menu
+            case 0: //main menu
                 switch (currentItem)
                 {
+                case 0:
+                    currentMenu = 1;
+                    currentItem = 0;
+                    break;
                 case 1:
                     currentMenu = 2;
-                    currentItem = 1;
+                    currentItem = 0;
                     break;
                 case 2:
                     currentMenu = 3;
-                    currentItem = 1;
+                    currentItem = 0;
                     break;
                 case 3:
-                    currentMenu = 5;
-                    currentItem = 1;
-                    break;
-                case 4:
-                    currentItem = 1;
+                    restMenuData();
                     enterMenu = false;
+                    Serial.print("exit!");
                     break;
                 }
                 break;
 
-            case 2: //manual watering
+            case 1: //manual watering
                 if (currentItem == sensors.size())
                 { //back
-                    currentItem = 1;
-                    currentMenu = 1;
+                    currentItem = 0;
+                    currentMenu = 0;
                 }
                 else
                 {
-                    sensors[currentItem - 1].setWater();
+                    sensors[currentItem].setWater();
                 }
                 break;
 
-            case 3: //record
+            case 2: //record
                 if (currentItem == sensors.size())
                 {
                     currentItem = 1;
-                    currentMenu = 1;
+                    currentMenu = 0;
                 }
                 else
                 {
-                    currentMenu = 4; //enter the record menu for each sensor
+                    currentMenu = 3; //enter the record menu for each sensor
                     currentItemForLastPage = currentItem;
-                    currentItem = 1;
+                    currentItem = 0;
                 }
                 break;
 
-            case 4: //record menu for each sensor
-                if (currentItem == 2)
+            case 3: //record menu for each sensor
+                if (currentItem == 1)
                 {
                     currentItem = currentItemForLastPage;
-                    currentMenu = 3;
-                    sensors[currentItemForLastPage - 1].setRecord(false);
+                    currentMenu = 2;
+                    sensors[currentItemForLastPage].setRecord(false);
                 }
                 else
                 {
-                    sensors[currentItemForLastPage - 1].setRecord(true);
+                    sensors[currentItemForLastPage].setRecord(true);
                 }
                 break;
 
-            case 5: //option
+            case 4: //option
                 if (currentItem == sensors.size())
                 {
-                    currentItem = 5;
-                    currentMenu = 1;
+                    currentItem = 4;
+                    currentMenu = 0;
                 }
                 else
                 {
-                    currentMenu = 6; //enter the option menu for each sensor
+                    currentMenu = 5; //enter the option menu for each sensor
                     currentItemForLastPage = currentItem;
-                    currentItem = 1;
+                    currentItem = 0;
+                }
+                break;
+
+            case 5:
+                if (currentItem == 4)
+                {
+                    currentItem = currentItemForLastPage;
+                    currentMenu = 4;
+                }
+                else
+                {
+                    currentMenu = 6; //enter the record menu for each sensor
+                    currentItemForLastPage = currentItem;
                 }
                 break;
 
             case 6:
-                if (currentItem == 5)
-                {
-                    currentItem = currentItemForLastPage;
-                    currentMenu = 5;
-                }
-                else
-                {
-                    currentMenu = 7; //enter the record menu for each sensor
-                    currentItemForLastPage = currentItem;
-                }
-                break;
-
-            case 7:
-                currentMenu = 6;
+                currentMenu = 5;
                 switch (currentItemForLastPage)
                 {
                 case 1:
-                    sensors[currentItemForLastPage - 1].setTempertureLowerLimit(currentItem);
+                    sensors[currentItemForLastPage].setTempertureLowerLimit(currentItem);
                     break;
                 case 2:
-                    sensors[currentItemForLastPage - 1].setTempertureUpperLimit(currentItem);
+                    sensors[currentItemForLastPage].setTempertureUpperLimit(currentItem);
                     break;
                 case 3:
-                    sensors[currentItemForLastPage - 1].setHumidityLowerLimit(currentItem);
+                    sensors[currentItemForLastPage].setHumidityLowerLimit(currentItem);
                     break;
                 case 4:
-                    sensors[currentItemForLastPage - 1].setHumidityUpperLimit(currentItem);
+                    sensors[currentItemForLastPage].setHumidityUpperLimit(currentItem);
                     break;
                 }
                 currentItem = currentItemForLastPage;
@@ -723,8 +720,8 @@ void readQuadrature()
 }
 void restMenuData()
 {
-    currentMenu = 1; //different number reprensent different menu interface; 1:main menu 2:manual watering 3:record 4:record for each sensor 5:setting 6:setting for differnet sensor
+    currentMenu = 0; //different number reprensent different menu interface; 1:main menu 2:manual watering 3:record 4:record for each sensor 5:setting 6:setting for differnet sensor
     currentPage = 1;
     currentItem = 0;
-    currentItemForLastPage = 1;
+    currentItemForLastPage = 0;
 }
