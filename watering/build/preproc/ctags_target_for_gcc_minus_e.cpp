@@ -271,7 +271,7 @@ vector<PlantSensor> sensors;
 
 bool enterMenu = false; //if enter the menu
 const char *mainMenuItem[3] = {"Manual watering", "Auto-Watering settings", "Sensor records"};
-const char *menuItemFor5[4] = {"UpperTemputerture", "LowerTemputerture", "UpperHumidity", "LowerHumidity"};
+const char *menuItemFor3[4] = {"UpperTemputerture", "LowerTemputerture", "UpperHumidity", "LowerHumidity"};
 
 uint8_t currentMenu = 0; //different number reprensent different menu interface; 1:main menu 2:manual watering 3:record 4:record for each sensor 5:setting 6:setting for differnet sensor
 uint8_t currentPage = 0;
@@ -306,7 +306,7 @@ void setup()
 
 void loop()
 {
-    if(lastDebounceTime > 50) debounce = true;
+    if(lastDebounceTime > 200) debounce = true;
 
     //if (enterMenu)
         //Serial.println("yes");
@@ -325,6 +325,8 @@ void loop()
 
             drawMenu();
         }
+
+
         u8g2.sendBuffer();
     //} while (u8g2.nextPage());
 
@@ -376,9 +378,9 @@ void drawMenu()
         break;
 
     case 3://settings for each
-        for (int n = 0; n < sensors.size(); n++)
+        for (int n = 0; n < 4; n++)
         {
-            items.push_back(sensors[n].getName()); //temperaly is just get names, will be change to get date
+            items.push_back(menuItemFor3[n]); //temperaly is just get names, will be change to get date
         }
         items.push_back("Back");
         u8g2.setCursor((u8g2.getDisplayWidth() / 2) - ((u8g2.getStrWidth(sensors[currentItemForLastPage].getName()) / 2)), 1);
@@ -397,7 +399,7 @@ void drawMenu()
     case 5://records for each
         for (int n = 0; n < sensors.size(); n++)
         {
-            items.push_back(menuItemFor5[n]);
+            items.push_back("menuItemFor5[n]");
         }
         items.push_back("Back");
         u8g2.setCursor((u8g2.getDisplayWidth() / 2) - ((u8g2.getStrWidth(sensors[currentItemForLastPage].getName()) / 2)), 1);
@@ -407,11 +409,14 @@ void drawMenu()
     }
     if (currentMenu == 6)
     {
+        u8g2.setCursor((u8g2.getDisplayWidth() / 2) - ((u8g2.getStrWidth(menuItemFor3[currentItemForLastPage]) / 2)), 1);
+        u8g2.print(menuItemFor3[currentItemForLastPage]);
+        u8g2.drawStr((u8g2.getDisplayWidth() / 2) - ((u8g2.getStrWidth("Twist to adjust") / 2)),16,"Twist to adjust");
         u8g2.setFont(u8g2_font_unifont_t_symbols); //set fonts
-        u8g2.drawGlyph(48, 40, 0x23f5);
-        u8g2.drawGlyph(88, 40, 0x23f6);
+        u8g2.drawGlyph((u8g2.getDisplayWidth() / 2) - 20, 40, 0x23f4);
+        u8g2.drawGlyph((u8g2.getDisplayWidth() / 2) + u8g2.getStrWidth("0"), 40, 0x23f5);
         u8g2.setFont(u8g2_font_6x13_tf);
-        u8g2.setCursor(68, 40);
+        u8g2.setCursor(((u8g2.getDisplayWidth() / 2) - u8g2.getStrWidth("0") / 2), 40);
         u8g2.print(currentItem);
     }
     else
@@ -574,7 +579,7 @@ void buttonPressed()
                 {
                     currentMenu = 3; //enter settings menu for each sensor
                     currentItemForLastPage = currentItem;
-                    currentItem = 1;
+                    currentItem = 0;
                 }
                 break;
 
@@ -582,12 +587,13 @@ void buttonPressed()
                 if (currentItem == 4)//back
                 {
                     currentItem = currentItemForLastPage;
-                    currentMenu = 4;
+                    currentMenu = 2;
                 }
                 else
                 {
                     currentMenu = 6; //enter the settings menu for each sensor
                     currentItemForLastPage = currentItem;
+                    currentItem = 0;
                 }
                 break;
 
@@ -619,7 +625,7 @@ void buttonPressed()
                 break;
 
             case 6:
-                currentMenu = 6;
+                currentMenu = 3;
                 switch (currentItemForLastPage)
                 {
                 case 1:
