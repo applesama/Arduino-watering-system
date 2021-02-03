@@ -84,7 +84,7 @@ public:
     AvaliablePort(); //constructor
 private:
     volatile bool mAvaliableSet[4] = {true, true, true, true}; //Each of the set repersent two ports that one plantsensor need, one analog, one digits
-    const int mHumidityPort[4] = {14, 15, 16, 17};             //All ports for humidity sensors
+    const int mHumidityPort[4] = {A8, A9, A10, A11};             //All ports for humidity sensors
     const int mServoPort[4] = {8, 9, 10, 11};                  //All ports for servo motors
     const char *mSensors[4] = {"Sensor1", "Sensor2", "Sensor3", "Sensor4"};
 };
@@ -150,15 +150,18 @@ public:
     {
         mServoPort = port;
         pinMode(mServoPort, OUTPUT);
+        digitalWrite(mServoPort, LOW);
     }
 
     void watering()
     { // loop will keep call this function all the time
         if (mWaterFlag)
         {
-            digitalWrite(mServoPort, LOW);
-            delay(5000);
+            
             digitalWrite(mServoPort, HIGH);
+            delay(5000);
+            digitalWrite(mServoPort, LOW);
+            Serial.println("Watered!");
             mWaterFlag = false;
         }
     }
@@ -281,21 +284,23 @@ uint8_t flag = 0;
 long lastDebounceTime = 0;
 bool debounce = true;
 
-#line 282 "f:\\WaterArduino\\watering\\watering.ino"
+#line 285 "f:\\WaterArduino\\watering\\watering.ino"
 void setup();
-#line 300 "f:\\WaterArduino\\watering\\watering.ino"
+#line 303 "f:\\WaterArduino\\watering\\watering.ino"
 void loop();
-#line 329 "f:\\WaterArduino\\watering\\watering.ino"
+#line 334 "f:\\WaterArduino\\watering\\watering.ino"
 void drawMenu();
-#line 433 "f:\\WaterArduino\\watering\\watering.ino"
+#line 438 "f:\\WaterArduino\\watering\\watering.ino"
 void drawHomePage();
-#line 514 "f:\\WaterArduino\\watering\\watering.ino"
+#line 519 "f:\\WaterArduino\\watering\\watering.ino"
 void buttonPressed();
-#line 643 "f:\\WaterArduino\\watering\\watering.ino"
+#line 648 "f:\\WaterArduino\\watering\\watering.ino"
 void readQuadrature();
-#line 739 "f:\\WaterArduino\\watering\\watering.ino"
+#line 744 "f:\\WaterArduino\\watering\\watering.ino"
 void restMenuData();
-#line 282 "f:\\WaterArduino\\watering\\watering.ino"
+#line 752 "f:\\WaterArduino\\watering\\watering.ino"
+void AutoWatering();
+#line 285 "f:\\WaterArduino\\watering\\watering.ino"
 void setup()
 {
     Serial.begin(9600);
@@ -317,7 +322,9 @@ void setup()
 void loop()
 {
     if(lastDebounceTime > 200) debounce = true;
-    
+    for(int i = 0; i < 4; i ++){
+        sensors[i].watering();
+    }
     //if (enterMenu)
         //Serial.println("yes");
         //Serial.println(currentItem);
@@ -476,7 +483,7 @@ void drawHomePage()
         u8g2.drawStr(100, h + 37, "oC");
         u8g2.setFont(u8g2_font_blipfest_07_tr); //5 pixels high
         u8g2.drawStr(82, 17, "Humidity");
-        u8g2.drawStr(82, 37, "Temperature"); //Serial.println("1!");
+        u8g2.drawStr(82, 37, "Temperature");
         break;
     case DHTLIB_ERROR_CHECKSUM:
         u8g2.drawStr(85, h + 15, "Sensor");
@@ -485,7 +492,7 @@ void drawHomePage()
         break;
     case DHTLIB_ERROR_TIMEOUT:
         u8g2.drawStr(85, h + 15, "Sensor");
-        u8g2.drawStr(85, h + 30, "Time out");//Serial.println("2!");
+        u8g2.drawStr(85, h + 30, "Time out");
         break;
     default:
         u8g2.drawStr(85, h + 15, "Sensor");
@@ -625,7 +632,7 @@ void buttonPressed()
                 if (currentItem == 0)
                 {
                     currentItem = currentItemForLastPage;
-                    currentMenu = 2;
+                    currentMenu = 4;
                     sensors[currentItemForLastPage].setRecord(false);
                 }
                 else
@@ -759,4 +766,16 @@ void restMenuData()
     currentPage = 0;
     currentItem = 0;
     currentItemForLastPage = 0;
+}
+
+void AutoWatering(){
+    for(int i = 0; i < 4; i++){
+        int chk = DHT11.read(DHT11PIN);
+        if(chk == "DHTLIB_OK"){
+            if((sensors[i].getTempertureLowerLimit() < DHT11.temperature)&&(sensors[i].getTempertureUpperLimit() > DHT11.temperature)&&(sensors[i].getHumidityLowerLimit() < DHT11.humidity)&&(sensors[i].getHumidityUpperLimit() > DHT11.humidity)){
+                sensors[i].setWater();
+            }
+        }
+        
+    }
 }

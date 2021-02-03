@@ -2,6 +2,7 @@
 #include <dht11.h>
 #include <U8g2lib.h>
 #include "ArduinoSTL.h"
+#include <string.h>
 #ifdef U8X8_HAVE_HW_I2C
 #include <Wire.h>
 #endif
@@ -12,8 +13,6 @@ using namespace std;
 #define B 2
 #define C 18
 dht11 DHT11; //create the dht11 sensor
-
-
 
 class AvaliablePort
 {
@@ -82,7 +81,7 @@ public:
     AvaliablePort(); //constructor
 private:
     volatile bool mAvaliableSet[4] = {true, true, true, true}; //Each of the set repersent two ports that one plantsensor need, one analog, one digits
-    const int mHumidityPort[4] = {14, 15, 16, 17};             //All ports for humidity sensors
+    const int mHumidityPort[4] = {A8, A9, A10, A11};           //All ports for humidity sensors
     const int mServoPort[4] = {8, 9, 10, 11};                  //All ports for servo motors
     const char *mSensors[4] = {"Sensor1", "Sensor2", "Sensor3", "Sensor4"};
 };
@@ -99,7 +98,7 @@ AvaliablePort::AvaliablePort()
 AvaliablePort arduinoPort; //instantiating it
 
 //U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE | U8G_I2C_OPT_DEV_0);
-U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0, /* clock=*/SCL, /* data=*/SDA, /* reset=*/U8X8_PIN_NONE); // All Boards without Reset of the Display
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* clock=*/SCL, /* data=*/SDA, /* reset=*/U8X8_PIN_NONE); // All Boards without Reset of the Display
 class PlantSensor
 {
 public:
@@ -148,15 +147,18 @@ public:
     {
         mServoPort = port;
         pinMode(mServoPort, OUTPUT);
+        digitalWrite(mServoPort, LOW);
     }
 
     void watering()
     { // loop will keep call this function all the time
         if (mWaterFlag)
         {
-            digitalWrite(mServoPort, LOW);
-            delay(5000);
+
             digitalWrite(mServoPort, HIGH);
+            delay(5000);
+            digitalWrite(mServoPort, LOW);
+            Serial.println("Watered!");
             mWaterFlag = false;
         }
     }
@@ -262,7 +264,23 @@ PlantSensor::~PlantSensor()
 
 vector<PlantSensor> sensors;
 
-bool enterMenu = false; //if enter the menu
+struct UserData
+{
+    char city[16];        //city name
+    char weather_code[4]; //code of weather
+    char temp[5];         //temperature
+    char day;
+    char hours = 0;
+    char mins = 0;
+    char seconds = 0;
+    long innerTimeWhenUpdated = 0;
+};
+
+UserData userData;
+
+bool enterMenu = false;   //if enter the menu
+bool weatherMenu = false; // the menu that display weather
+
 const char *mainMenuItem[3] = {"Manual watering", "Auto-Watering settings", "Sensor records"};
 const char *menuItemFor3[4] = {"UpperTemputerture", "LowerTemputerture", "UpperHumidity", "LowerHumidity"};
 
@@ -281,6 +299,7 @@ bool debounce = true;
 
 void setup()
 {
+    Wire.begin();
     Serial.begin(9600);
     pinMode(A, INPUT); //for encoder A pin and B pin
     pinMode(B, INPUT);
@@ -294,34 +313,85 @@ void setup()
         PlantSensor sensor(arduinoPort.getServoPort(), arduinoPort.getSensorName(), arduinoPort.getHumidityPort());
         sensors.push_back(sensor);
     }
-
 }
 
 void loop()
 {
-    if(lastDebounceTime > 200) debounce = true;
-    
-    //if (enterMenu)
-        //Serial.println("yes");
-        //Serial.println(currentItem);
-        //Serial.println(currentMenu);
-        //u8g2.firstPage();
-    //do
-    //{
-        u8g2.clearBuffer();
-        if (enterMenu == false)
+    Wire.beginTransmission(8); /* begin with device address 8 */
+    Wire.write("update");      /* sends hello string */
+    Wire.endTransmission();    /* stop transmitting */
+    Wire.requestFrom(8, 13);   /* request & read data of size 13 from slave */
+
+    char *receivedData = "";
+
+    while (Wire.available())
+    {
+        receivedData = receivedData + Wire.read();
+    }
+    if (strlen(receivedData) == 13)
+    {
+        for (int i = 0; i < 4; i++)
         {
-            drawHomePage();
+            userData->city[i] = receivedData[i]; //city
+        }
+
+        for (int i = 0; i < 2; i++)
+        {
+            userData->weather_code[i] = receivedData[i + 4]; //weather code
+        }
+
+        for (int i = 0; i < 2; i++)
+        {
+            userData->temp[i] = receivedData[i + 6]; // temperatuare
+        }
+
+        userData->day = receivedData[i + 8]; //day
+
+        for (int i = 0; i < 2; i++)
+        {
+            userData->hours[i] = receivedData[i]; //hours
+        }
+
+        for (int i = 0; i < 2; i++)
+        {
+            userData->mins[i] = receivedData[i]; //mins
+        }
+
+        for (int i = 0; i < 2; i++)
+        {
+            userData->seconds[i] = receivedData[i]; //seconds
+        }
+        userData->innerTimeWhenUpdated = millis();
+    }
+
+    if (lastDebounceTime > 200)
+    {
+        debounce = true; //debounce
+    }
+
+    for (int i = 0; i < 4; i++)
+    {
+        sensors[i].watering();
+    }
+
+    u8g2.clearBuffer();
+    if (enterMenu == false)
+    {
+        drawHomePage();
+    }
+    else
+    {
+        if (!weatherMenu)
+        {
+            drawMenu();
         }
         else
         {
-
-            drawMenu();
+            drawWeather();
         }
-        
+    }
 
-        u8g2.sendBuffer();
-    //} while (u8g2.nextPage());
+    u8g2.sendBuffer();
 
     delay(1000);
 }
@@ -339,11 +409,9 @@ void drawMenu()
     h = u8g2.getAscent() - u8g2.getDescent();         //height of fonts
     w = u8g2.getDisplayWidth();
 
-    
-
     switch (currentMenu)
     {
-    case 0://main
+    case 0: //main
         for (int n = 0; n < 3; n++)
         {
             items.push_back(mainMenuItem[n]);
@@ -352,7 +420,7 @@ void drawMenu()
         u8g2.drawStr((u8g2.getDisplayWidth() / 2) - ((u8g2.getStrWidth("Main Menu") / 2)), 1, "Main Menu");
         break;
 
-    case 1://manual
+    case 1: //manual
         for (int n = 0; n < sensors.size(); n++)
         {
             items.push_back(sensors[n].getName());
@@ -361,7 +429,7 @@ void drawMenu()
         u8g2.drawStr((u8g2.getDisplayWidth() / 2) - ((u8g2.getStrWidth("Manual Watering") / 2)), 1, "Manual Watering");
         break;
 
-    case 2://settings
+    case 2: //settings
         for (int n = 0; n < sensors.size(); n++)
         {
             items.push_back(sensors[n].getName());
@@ -370,7 +438,7 @@ void drawMenu()
         u8g2.drawStr((u8g2.getDisplayWidth() / 2) - ((u8g2.getStrWidth("Settings") / 2)), 1, "Settings");
         break;
 
-    case 3://settings for each
+    case 3: //settings for each
         for (int n = 0; n < 4; n++)
         {
             items.push_back(menuItemFor3[n]); //temperaly is just get names, will be change to get date
@@ -380,7 +448,7 @@ void drawMenu()
         u8g2.print(sensors[currentItemForLastPage].getName());
         break;
 
-    case 4://records
+    case 4: //records
         for (int n = 0; n < sensors.size(); n++)
         {
             items.push_back(sensors[n].getName());
@@ -389,7 +457,7 @@ void drawMenu()
         u8g2.drawStr((u8g2.getDisplayWidth() / 2) - ((u8g2.getStrWidth("Records") / 2)), 1, "Records");
         break;
 
-    case 5://records for each
+    case 5: //records for each
         for (int n = 0; n < sensors.size(); n++)
         {
             items.push_back("menuItemFor5[n]");
@@ -398,13 +466,12 @@ void drawMenu()
         u8g2.setCursor((u8g2.getDisplayWidth() / 2) - ((u8g2.getStrWidth(sensors[currentItemForLastPage].getName()) / 2)), 1);
         u8g2.print(sensors[currentItemForLastPage].getName());
         break;
-    
     }
     if (currentMenu == 6)
     {
         u8g2.setCursor((u8g2.getDisplayWidth() / 2) - ((u8g2.getStrWidth(menuItemFor3[currentItemForLastPage]) / 2)), 1);
         u8g2.print(menuItemFor3[currentItemForLastPage]);
-        u8g2.drawStr((u8g2.getDisplayWidth() / 2) - ((u8g2.getStrWidth("Twist to adjust") / 2)),16,"Twist to adjust");
+        u8g2.drawStr((u8g2.getDisplayWidth() / 2) - ((u8g2.getStrWidth("Twist to adjust") / 2)), 16, "Twist to adjust");
         u8g2.setFont(u8g2_font_unifont_t_symbols); //set fonts
         u8g2.drawGlyph((u8g2.getDisplayWidth() / 2) - 20, 40, 0x23f4);
         u8g2.drawGlyph((u8g2.getDisplayWidth() / 2) + u8g2.getStrWidth("0"), 40, 0x23f5);
@@ -431,7 +498,6 @@ void drawMenu()
 }
 
 void drawHomePage()
-
 {
     uint8_t i, h;
     u8g2_uint_t d;
@@ -441,7 +507,7 @@ void drawHomePage()
     u8g2.setFont(u8g2_font_open_iconic_all_1x_t);
     u8g2.drawGlyph(d, 2, 0x00f8); //signal sign
     u8g2.setFont(u8g_font_6x13);
-    u8g2.drawStr(d + 50, 2, "Time");
+    drawTime();
     u8g2.drawLine(u8g2.getDisplayWidth(), 16, 0, 16);   //a horizontal line
     u8g2.drawLine(80, u8g2.getDisplayHeight(), 80, 16); //a vertical line
     int chk = DHT11.read(DHT11PIN);                     //将读取到的值赋给chk
@@ -459,7 +525,7 @@ void drawHomePage()
         u8g2.drawStr(100, h + 37, "oC");
         u8g2.setFont(u8g2_font_blipfest_07_tr); //5 pixels high
         u8g2.drawStr(82, 17, "Humidity");
-        u8g2.drawStr(82, 37, "Temperature"); //Serial.println("1!");
+        u8g2.drawStr(82, 37, "Temperature");
         break;
     case DHTLIB_ERROR_CHECKSUM:
         u8g2.drawStr(85, h + 15, "Sensor");
@@ -468,14 +534,14 @@ void drawHomePage()
         break;
     case DHTLIB_ERROR_TIMEOUT:
         u8g2.drawStr(85, h + 15, "Sensor");
-        u8g2.drawStr(85, h + 30, "Time out");//Serial.println("2!");
+        u8g2.drawStr(85, h + 30, "Time out");
         break;
     default:
         u8g2.drawStr(85, h + 15, "Sensor");
         u8g2.drawStr(85, h + 30, "Unknown");
         u8g2.drawStr(85, h + 45, "error");
         break;
-    }//Serial.println("Finish!");
+    } //Serial.println("Finish!");
 
     u8g2.setFont(u8g2_font_5x7_tr);
     h = u8g2.getAscent() - u8g2.getDescent();
@@ -511,17 +577,98 @@ void drawHomePage()
     }
 }
 
+void drawWeatherPage()
+{
+    uint8_t i, h;
+    u8g2_uint_t d;
+
+    u8g2.setFontRefHeightText(); // Ascent will be the ascent of "A" or "1" of the current font. Descent will be the descent "g" of the current font (this is the default after startup).
+    u8g2.setFontPosTop();        //set the lefttop as  (0,0)
+    u8g2.setFont(u8g2_font_open_iconic_all_1x_t);
+    u8g2.drawGlyph(d, 2, 0x00f8); //signal sign
+    u8g2.setFont(u8g_font_6x13);
+
+    drawTime();
+
+    u8g2.drawLine(u8g2.getDisplayWidth(), 16, 0, 16);   //a horizontal line
+    u8g2.drawLine(80, u8g2.getDisplayHeight(), 80, 16); //a vertical line
+    int chk = DHT11.read(DHT11PIN);                     //将读取到的值赋给chk
+
+    u8g2.setFont(u8g2_font_5x7_tr);           //6 pixels high
+    h = u8g2.getAscent() - u8g2.getDescent(); //get text height
+    switch (chk)
+    {
+    case DHTLIB_OK:
+        u8g2.setCursor(90, h + 17);
+        u8g2.print(DHT11.humidity);
+        u8g2.drawStr(100, h + 17, "%");
+        u8g2.setCursor(90, h + 37);
+        u8g2.print(DHT11.temperature);
+        u8g2.drawStr(100, h + 37, "oC");
+        u8g2.setFont(u8g2_font_blipfest_07_tr); //5 pixels high
+        u8g2.drawStr(82, 17, "Humidity");
+        u8g2.drawStr(82, 37, "Temperature");
+        break;
+    case DHTLIB_ERROR_CHECKSUM:
+        u8g2.drawStr(85, h + 15, "Sensor");
+        u8g2.drawStr(85, h + 30, "checksum");
+        u8g2.drawStr(85, h + 45, "error");
+        break;
+    case DHTLIB_ERROR_TIMEOUT:
+        u8g2.drawStr(85, h + 15, "Sensor");
+        u8g2.drawStr(85, h + 30, "Time out");
+        break;
+    default:
+        u8g2.drawStr(85, h + 15, "Sensor");
+        u8g2.drawStr(85, h + 30, "Unknown");
+        u8g2.drawStr(85, h + 45, "error");
+        break;
+    } //Serial.println("Finish!");
+
+    u8g2.setFont(u8g2_font_5x7_tr);
+    h = u8g2.getAscent() - u8g2.getDescent();
+    for (i = 0; i < sensors.size(); i++)
+    {
+        int x, y;
+        switch (i)
+        {
+        case 0:
+            x = 2;
+            y = 17;
+            break;
+
+        case 1:
+            x = 42;
+            y = 17;
+            break;
+
+        case 2:
+            x = 2;
+            y = 37;
+            break;
+
+        case 3:
+            x = 42;
+            y = 37;
+            break;
+        }
+        u8g2.setCursor(x, y);
+        u8g2.print(sensors[i].getName());
+        u8g2.setCursor(x, y + h);
+        u8g2.print(sensors[i].getCurrentHumidity());
+    }
+}
 void buttonPressed()
 {
-    
-    if(debounce){
+
+    if (debounce)
+    {
         lastDebounceTime = millis();
-    
+
         Serial.println("Pressed!");
         if (enterMenu == false) //if not enter the menu, then enter it
         {
-            enterMenu = true;
-            restMenuData();
+            weatherMenu = true;
         }
         else
         {
@@ -554,7 +701,8 @@ void buttonPressed()
                 if (currentItem == sensors.size())
                 { //back
                     currentItem = 0;
-                    currentMenu = 0;Serial.print("back!");
+                    currentMenu = 0;
+                    Serial.print("back!");
                 }
                 else
                 {
@@ -576,8 +724,8 @@ void buttonPressed()
                 }
                 break;
 
-            case 3: //setting menu for each sensor
-                if (currentItem == 4)//back
+            case 3:                   //setting menu for each sensor
+                if (currentItem == 4) //back
                 {
                     currentItem = currentItemForLastPage;
                     currentMenu = 2;
@@ -604,11 +752,11 @@ void buttonPressed()
                 }
                 break;
 
-            case 5://records menu for each sensor
+            case 5: //records menu for each sensor
                 if (currentItem == 0)
                 {
                     currentItem = currentItemForLastPage;
-                    currentMenu = 2;
+                    currentMenu = 4;
                     sensors[currentItemForLastPage].setRecord(false);
                 }
                 else
@@ -687,14 +835,14 @@ void readQuadrature()
                 break;
 
             case 4: //records
-                
+
                 if (currentItem == sensors.size())
                     currentItem = (sensors.size());
                 else
                     currentItem++;
                 break;
 
-            case 5://records for each sensors
+            case 5: //records for each sensors
                 if (currentItem == 0)
                     currentItem = 0;
                 else
@@ -729,12 +877,11 @@ void readQuadrature()
         int_nu = 0;
 
         Serial.print("Item: ");
-    Serial.println(currentItem);
-    Serial.print("Menu: ");
-    Serial.println(currentMenu);
-    Serial.println("--------");
+        Serial.println(currentItem);
+        Serial.print("Menu: ");
+        Serial.println(currentMenu);
+        Serial.println("--------");
     }
-    
 }
 void restMenuData()
 {
@@ -742,4 +889,147 @@ void restMenuData()
     currentPage = 0;
     currentItem = 0;
     currentItemForLastPage = 0;
+}
+
+void autoWatering()
+{
+    for (int i = 0; i < 4; i++)
+    {
+        int chk = DHT11.read(DHT11PIN);
+        if (chk == "DHTLIB_OK")
+        {
+            if ((sensors[i].getTempertureLowerLimit() < DHT11.temperature) && (sensors[i].getTempertureUpperLimit() > DHT11.temperature) && (sensors[i].getHumidityLowerLimit() < DHT11.humidity) && (sensors[i].getHumidityUpperLimit() > DHT11.humidity))
+            {
+                sensors[i].setWater();
+            }
+        }
+    }
+}
+
+void drawTime()
+{
+    u8g2.setCursor(d + 40, 2);
+    u8g2.print(userData->hours);
+    u8g2.drawStr(d + 48, 2, ":");
+    u8g2.setCursor(d + 50, 2);
+    u8g2.print(userData->mins);
+    u8g2.drawStr(d + 56, 2, ":");
+    u8g2.setCursor(d + 58, 2);
+    u8g2.print(userData->seconds);
+    switch (userData->day)
+    {
+    case "1":
+        u8g2.drawStr(d + 60, 2, "Mon.");
+        break;
+    case "2":
+        u8g2.drawStr(d + 60, 2, "Tues.");
+        break;
+    case "3":
+        u8g2.drawStr(d + 60, 2, "Wed.");
+        break;
+    case "4":
+        u8g2.drawStr(d + 60, 2, "Thur.");
+        break;
+    case "5":
+        u8g2.drawStr(d + 60, 2, "Fri.");
+        break;
+    case "6":
+        u8g2.drawStr(d + 60, 2, "Sat.");
+        break;
+    case "0":
+        u8g2.drawStr(d + 60, 2, "Sun.");
+        break;
+    }
+}
+
+void drawWeatherSymbol(u8g2_uint_t x, u8g2_uint_t y, uint8_t symbol)
+
+{
+    // fonts used:
+    // u8g2_font_open_iconic_embedded_6x_t
+    // u8g2_font_open_iconic_weather_6x_t
+    // encoding values, see: https://github.com/olikraus/u8g2/wiki/fntgrpiconic
+    switch (symbol)
+    {
+    case SUN_DAY: //太阳
+        u8g2.setFont(u8g2_font_open_iconic_weather_6x_t);
+        u8g2.drawGlyph(x, y, 69);
+        break;
+    case SUN_NIGHT: //太阳
+        u8g2.setFont(u8g2_font_open_iconic_weather_6x_t);
+        u8g2.drawGlyph(x, y, 66);
+        break;
+    case SUN_CLOUD: //晴间多云
+        u8g2.setFont(u8g2_font_open_iconic_weather_6x_t);
+        u8g2.drawGlyph(x, y, 65);
+        break;
+    case CLOUD: //多云
+        u8g2.setFont(u8g2_font_open_iconic_weather_6x_t);
+        u8g2.drawGlyph(x, y, 64);
+        break;
+    case RAIN: //下雨
+        u8g2.setFont(u8g2_font_open_iconic_weather_6x_t);
+        u8g2.drawGlyph(x, y, 67);
+        break;
+    case THUNDER: //打雷
+        u8g2.setFont(u8g2_font_open_iconic_embedded_6x_t);
+        u8g2.drawGlyph(x, y, 67);
+        break;
+    }
+}
+
+void drawWeather(uint8_t symbol, char *degree, char *city)
+{
+    DebugPrintln(city);
+    u8g2.clearBuffer(); // clear the internal memory
+    //绘制天气符号
+    drawWeatherSymbol(0, 48, symbol);
+    //绘制温度
+    u8g2.setFont(u8g2_font_logisoso32_tf);
+    u8g2.setCursor(48 + 3, 42);
+    u8g2.print(degree);
+    u8g2.print("°C"); // requires enableUTF8Print()
+    u8g2.setFont(u8g2_font_unifont_t_chinese3);
+
+    u8g2_uint_t strWidth = u8g2.getUTF8Width(city);
+    u8g2_uint_t displayWidth = u8g2.getDisplayWidth();
+
+    u8g2.setCursor(displayWidth - strWidth - 5, 60);
+    u8g2.print(city);
+    u8g2.sendBuffer(); // transfer internal memory to the display
+}
+
+/**
+ * 根据天气接口返回的数据判断显示
+ */
+void showWeather(struct UserData *userData)
+{
+    if (strcmp(userData->weather_code, WEATHER_CODE_DAY_SUN) == 0 || strcmp(userData->weather_code, WEATHER_CODE_DAY_SUN1) == 0)
+    {
+        drawWeather(SUN_DAY, userData->temp, userData->city);
+    }
+    else if (strcmp(userData->weather_code, WEATHER_CODE_NIGHT_SUN) == 0 || strcmp(userData->weather_code, WEATHER_CODE_NIGHT_SUN2) == 0)
+    {
+        drawWeather(SUN_NIGHT, userData->temp, userData->city);
+    }
+    else if (strcmp(userData->weather_code, WEATHER_CODE_DAY_PARTLY_CLOUDY) == 0 || strcmp(userData->weather_code, WEATHER_CODE_NIGHT_PARTLY_CLOUDY) == 0)
+    {
+        drawWeather(SUN_CLOUD, userData->temp, userData->city);
+    }
+    else if (strcmp(userData->weather_code, WEATHER_CODE_CLOUDY) == 0 || strcmp(userData->weather_code, WEATHER_CODE_DAY_MOSTLY_CLOUDY) == 0 || strcmp(userData->weather_code, WEATHER_CODE_NIGHT_MOSTLY_CLOUDY) == 0 || strcmp(userData->weather_code, WEATHER_CODE_OVERCAST) == 0)
+    {
+        drawWeather(CLOUD, userData->temp, userData->city);
+    }
+    else if (strcmp(userData->weather_code, WEATHER_CODE_SHOWER) == 0 || strcmp(userData->weather_code, WEATHER_CODE_LIGHT_RAIN) == 0 || strcmp(userData->weather_code, WEATHER_CODE_MODERATE_RAIN) == 0 || strcmp(userData->weather_code, WEATHER_CODE_HEAVY_RAIN) == 0 || strcmp(userData->weather_code, WEATHER_CODE_STORM) == 0 || strcmp(userData->weather_code, WEATHER_CODE_HEAVY_STORM) == 0 || strcmp(userData->weather_code, WEATHER_CODE_SEVERE_STORM) == 0)
+    {
+        drawWeather(RAIN, userData->temp, userData->city);
+    }
+    else if (strcmp(userData->weather_code, WEATHER_CODE_THUNDERSHOWER) == 0 || strcmp(userData->weather_code, WEATHER_CODE_THUNDERSHOWER_WITH_HAIL) == 0)
+    {
+        drawWeather(THUNDER, userData->temp, userData->city);
+    }
+    else
+    {
+        drawWeather(CLOUD, userData->temp, userData->city);
+    }
 }

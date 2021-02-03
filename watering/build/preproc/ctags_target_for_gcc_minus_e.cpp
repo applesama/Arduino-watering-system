@@ -83,7 +83,7 @@ public:
     AvaliablePort(); //constructor
 private:
     volatile bool mAvaliableSet[4] = {true, true, true, true}; //Each of the set repersent two ports that one plantsensor need, one analog, one digits
-    const int mHumidityPort[4] = {14, 15, 16, 17}; //All ports for humidity sensors
+    const int mHumidityPort[4] = {A8, A9, A10, A11}; //All ports for humidity sensors
     const int mServoPort[4] = {8, 9, 10, 11}; //All ports for servo motors
     const char *mSensors[4] = {"Sensor1", "Sensor2", "Sensor3", "Sensor4"};
 };
@@ -149,15 +149,18 @@ public:
     {
         mServoPort = port;
         pinMode(mServoPort, 0x1);
+        digitalWrite(mServoPort, 0x0);
     }
 
     void watering()
     { // loop will keep call this function all the time
         if (mWaterFlag)
         {
-            digitalWrite(mServoPort, 0x0);
-            delay(5000);
+
             digitalWrite(mServoPort, 0x1);
+            delay(5000);
+            digitalWrite(mServoPort, 0x0);
+            Serial.println("Watered!");
             mWaterFlag = false;
         }
     }
@@ -190,7 +193,7 @@ public:
         return mOptionFlag;
 
     }*/
-# 187 "f:\\WaterArduino\\watering\\watering.ino"
+# 190 "f:\\WaterArduino\\watering\\watering.ino"
     int getTempertureLowerLimit()
     {
         return mTemperatureInterval[0];
@@ -307,7 +310,9 @@ void setup()
 void loop()
 {
     if(lastDebounceTime > 200) debounce = true;
-
+    for(int i = 0; i < 4; i ++){
+        sensors[i].watering();
+    }
     //if (enterMenu)
         //Serial.println("yes");
         //Serial.println(currentItem);
@@ -466,7 +471,7 @@ void drawHomePage()
         u8g2.drawStr(100, h + 37, "oC");
         u8g2.setFont(u8g2_font_blipfest_07_tr); //5 pixels high
         u8g2.drawStr(82, 17, "Humidity");
-        u8g2.drawStr(82, 37, "Temperature"); //Serial.println("1!");
+        u8g2.drawStr(82, 37, "Temperature");
         break;
     case -1:
         u8g2.drawStr(85, h + 15, "Sensor");
@@ -475,7 +480,7 @@ void drawHomePage()
         break;
     case -2:
         u8g2.drawStr(85, h + 15, "Sensor");
-        u8g2.drawStr(85, h + 30, "Time out");//Serial.println("2!");
+        u8g2.drawStr(85, h + 30, "Time out");
         break;
     default:
         u8g2.drawStr(85, h + 15, "Sensor");
@@ -615,7 +620,7 @@ void buttonPressed()
                 if (currentItem == 0)
                 {
                     currentItem = currentItemForLastPage;
-                    currentMenu = 2;
+                    currentMenu = 4;
                     sensors[currentItemForLastPage].setRecord(false);
                 }
                 else
@@ -749,4 +754,16 @@ void restMenuData()
     currentPage = 0;
     currentItem = 0;
     currentItemForLastPage = 0;
+}
+
+void AutoWatering(){
+    for(int i = 0; i < 4; i++){
+        int chk = DHT11.read(5 /*define the pin2 is the airTempHumidity sensor*/);
+        if(chk == "DHTLIB_OK"){
+            if((sensors[i].getTempertureLowerLimit() < DHT11.temperature)&&(sensors[i].getTempertureUpperLimit() > DHT11.temperature)&&(sensors[i].getHumidityLowerLimit() < DHT11.humidity)&&(sensors[i].getHumidityUpperLimit() > DHT11.humidity)){
+                sensors[i].setWater();
+            }
+        }
+
+    }
 }
