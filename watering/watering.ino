@@ -13,32 +13,32 @@ using namespace std;
 #define B 2
 #define C 18
 
-#define WEATHER_CODE_DAY_SUN "0" //晴（国内城市白天晴）
-#define WEATHER_CODE_NIGHT_SUN "1" //晴（国内城市夜晚晴）
-#define WEATHER_CODE_DAY_SUN1 "2" //晴（国外城市白天晴）
-#define WEATHER_CODE_NIGHT_SUN2 "3" //晴（国外城市夜晚晴）
-#define WEATHER_CODE_CLOUDY "4" //多云
-#define WEATHER_CODE_DAY_PARTLY_CLOUDY "5" //白天晴间多云
-#define WEATHER_CODE_NIGHT_PARTLY_CLOUDY "6" //夜晚晴间多云
-#define WEATHER_CODE_DAY_MOSTLY_CLOUDY "7" //白天大部多云
-#define WEATHER_CODE_NIGHT_MOSTLY_CLOUDY "8" //夜晚大部多云
-#define WEATHER_CODE_OVERCAST "9" //阴
-#define WEATHER_CODE_SHOWER "10" //阵雨
-#define WEATHER_CODE_THUNDERSHOWER "11" //雷阵雨
+#define WEATHER_CODE_DAY_SUN "0"                  //晴（国内城市白天晴）
+#define WEATHER_CODE_NIGHT_SUN "1"                //晴（国内城市夜晚晴）
+#define WEATHER_CODE_DAY_SUN1 "2"                 //晴（国外城市白天晴）
+#define WEATHER_CODE_NIGHT_SUN2 "3"               //晴（国外城市夜晚晴）
+#define WEATHER_CODE_CLOUDY "4"                   //多云
+#define WEATHER_CODE_DAY_PARTLY_CLOUDY "5"        //白天晴间多云
+#define WEATHER_CODE_NIGHT_PARTLY_CLOUDY "6"      //夜晚晴间多云
+#define WEATHER_CODE_DAY_MOSTLY_CLOUDY "7"        //白天大部多云
+#define WEATHER_CODE_NIGHT_MOSTLY_CLOUDY "8"      //夜晚大部多云
+#define WEATHER_CODE_OVERCAST "9"                 //阴
+#define WEATHER_CODE_SHOWER "10"                  //阵雨
+#define WEATHER_CODE_THUNDERSHOWER "11"           //雷阵雨
 #define WEATHER_CODE_THUNDERSHOWER_WITH_HAIL "12" //雷阵雨伴有冰雹
-#define WEATHER_CODE_LIGHT_RAIN "13" //小雨
-#define WEATHER_CODE_MODERATE_RAIN "14" //中雨
-#define WEATHER_CODE_HEAVY_RAIN "15" //大雨
-#define WEATHER_CODE_STORM "16" //暴雨
-#define WEATHER_CODE_HEAVY_STORM "17" //大暴雨
-#define WEATHER_CODE_SEVERE_STORM "18" //特大暴雨
-#define WEATHER_CODE_ICE_RAIN "19" //冻雨
-#define WEATHER_CODE_SLEET "20" //雨夹雪
-#define WEATHER_CODE_SNOW_FLURRY "21" //阵雪
-#define WEATHER_CODE_LIGHT_SNOW "22" //小雪
-#define WEATHER_CODE_MODERATE_SNOW "23" //中雪
-#define WEATHER_CODE_HEAVY_SNOW "24" //大雪
-#define WEATHER_CODE_SNOW_STORM "25" //暴雪
+#define WEATHER_CODE_LIGHT_RAIN "13"              //小雨
+#define WEATHER_CODE_MODERATE_RAIN "14"           //中雨
+#define WEATHER_CODE_HEAVY_RAIN "15"              //大雨
+#define WEATHER_CODE_STORM "16"                   //暴雨
+#define WEATHER_CODE_HEAVY_STORM "17"             //大暴雨
+#define WEATHER_CODE_SEVERE_STORM "18"            //特大暴雨
+#define WEATHER_CODE_ICE_RAIN "19"                //冻雨
+#define WEATHER_CODE_SLEET "20"                   //雨夹雪
+#define WEATHER_CODE_SNOW_FLURRY "21"             //阵雪
+#define WEATHER_CODE_LIGHT_SNOW "22"              //小雪
+#define WEATHER_CODE_MODERATE_SNOW "23"           //中雪
+#define WEATHER_CODE_HEAVY_SNOW "24"              //大雪
+#define WEATHER_CODE_SNOW_STORM "25"              //暴雪
 
 dht11 DHT11; //create the dht11 sensor
 
@@ -127,7 +127,7 @@ AvaliablePort arduinoPort; //instantiating it
 
 //U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE | U8G_I2C_OPT_DEV_0);
 //U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* clock=*/SCL, /* data=*/SDA, /* reset=*/U8X8_PIN_NONE); // All Boards without Reset of the Display
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 class PlantSensor
 {
 public:
@@ -185,10 +185,17 @@ public:
         {
 
             digitalWrite(mServoPort, HIGH);
-            delay(5000);
-            digitalWrite(mServoPort, LOW);
-            Serial.println("Watered!");
-            mWaterFlag = false;
+            if (lastWater == 0)
+            {
+                lastWater = millis();
+            }
+            if ((lastWater - millis()) > 5000)
+            {
+                digitalWrite(mServoPort, LOW);
+                Serial.println("Watered!");
+                mWaterFlag = false;
+                lastWater = 0;
+            }
         }
     }
 
@@ -274,6 +281,7 @@ private:
     volatile bool mWaterFlag = false;
     volatile bool mRecordFlag = false;
     volatile bool mOptionFlag = false;
+    long lastWater = 0;
 };
 
 PlantSensor::PlantSensor(int port2, char *name, int port1) //name means which plant it is
@@ -324,12 +332,16 @@ uint8_t int_nu = 0; //for rotary encoder
 uint8_t flag = 0;
 
 long lastDebounceTime = 0;
+
 bool debounce = true;
+
+char *signalStrength = "";
 
 void setup()
 {
-    
+
     Serial.begin(9600);
+    Serial1.begin(9600);
     pinMode(A, INPUT); //for encoder A pin and B pin
     pinMode(B, INPUT);
     pinMode(C, INPUT_PULLUP); //for te switch on encoder
@@ -337,7 +349,7 @@ void setup()
     attachInterrupt(0, readQuadrature, CHANGE);
     attachInterrupt(5, buttonPressed, LOW); //switch
     u8g2.begin();
-    Wire.begin();
+
     for (int i = 0; i < 4; i++)
     { //for test
         PlantSensor sensor(arduinoPort.getServoPort(), arduinoPort.getSensorName(), arduinoPort.getHumidityPort());
@@ -347,18 +359,16 @@ void setup()
 
 void loop()
 {
-    Wire.beginTransmission(8); /* begin with device address 8 */
-    Wire.write("update");      /* sends hello string */
-    Wire.endTransmission();    /* stop transmitting */
 
+    while (Serial1.read() >= 0)
+    {
+    };
+    Serial1.print("u");
     char *receivedData = "";
-    Wire.requestFrom(8, 13);   /* request & read data of size 13 from slave */
-
-    
-
     while (0 < Wire.available())
     {
         receivedData = receivedData + Wire.read();
+        delay(2);
     }
     if (strlen(receivedData) == 13)
     {
@@ -396,6 +406,15 @@ void loop()
         userData.innerTimeWhenUpdated = millis();
     }
 
+    Serial1.print("s");
+    receivedData = "";
+    while (0 < Wire.available())
+    {
+        receivedData = receivedData + Wire.read();
+        delay(2);
+    }
+    signalStrength = receivedData;
+
     Serial.print("receivedData: ");
     Serial.println(receivedData);
     Serial.print("Time: ");
@@ -409,20 +428,22 @@ void loop()
         debounce = true; //debounce
     }
 
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 4; i++)//Every loop will run this function to water the system
     {
         sensors[i].watering();
     }
 
     u8g2.clearBuffer();
+
     if (enterMenu == false)
     {
-        if(weatherMenu == false){
+        if (weatherMenu == false)
+        {
             drawHomePage();
         }
         else
         {
-            drawWeatherPage();
+            //drawWeatherPage();
         }
     }
     else
@@ -540,14 +561,17 @@ void drawHomePage()
 {
     uint8_t i, h;
 
-    
     Serial.println("Home");
     u8g2.setFontRefHeightText(); // Ascent will be the ascent of "A" or "1" of the current font. Descent will be the descent "g" of the current font (this is the default after startup).
     u8g2.setFontPosTop();        //set the lefttop as  (0,0)
     u8g2.setFont(u8g2_font_open_iconic_all_1x_t);
     u8g2.drawGlyph(0, 2, 0x00f8); //signal sign
     u8g2.setFont(u8g_font_6x13);
+    u8g2.setCursor(10, 2);
+    u8g2.print(signalStrength);
+
     drawTime();
+    
     u8g2.drawLine(u8g2.getDisplayWidth(), 16, 0, 16);   //a horizontal line
     u8g2.drawLine(80, u8g2.getDisplayHeight(), 80, 16); //a vertical line
     int chk = DHT11.read(DHT11PIN);                     //将读取到的值赋给chk
@@ -621,13 +645,15 @@ void drawWeatherPage()
 {
     Serial.println("Weather!");
     uint8_t i, h;
-    u8g2_uint_t d;
+
 
     u8g2.setFontRefHeightText(); // Ascent will be the ascent of "A" or "1" of the current font. Descent will be the descent "g" of the current font (this is the default after startup).
     u8g2.setFontPosTop();        //set the lefttop as  (0,0)
     u8g2.setFont(u8g2_font_open_iconic_all_1x_t);
-    u8g2.drawGlyph(d, 2, 0x00f8); //signal sign
+    u8g2.drawGlyph(2, 2, 0x00f8); //signal sign
     u8g2.setFont(u8g_font_6x13);
+    u8g2.setCursor(10, 2);
+    u8g2.print(signalStrength);
 
     drawTime();
     showWeather();
@@ -742,21 +768,19 @@ void showWeather()
 
 void drawWeather(uint8_t symbol, char *degree, char *city)
 {
-    
+
     drawWeatherSymbol(0, 48, symbol);
     u8g2.setFont(u8g2_font_5x7_tr);
-    u8g2.drawStr(20, 42, "Temp:")
-    u8g2.setCursor(51, 42);
+    u8g2.drawStr(20, 42, "Temp:");
+        u8g2.setCursor(51, 42);
     u8g2.print(degree);
     u8g2.print("oC");
 
-    u8g2.drawStr(20, 48, "City:")
-    u8g2_uint_t strWidth = u8g2.getUTF8Width(city);
+    u8g2.drawStr(20, 48, "City:");
+        u8g2_uint_t strWidth = u8g2.getUTF8Width(city);
     u8g2_uint_t displayWidth = u8g2.getDisplayWidth();
     u8g2.setCursor(displayWidth - strWidth - 5, 60);
     u8g2.print(city);
-
-
 }
 
 void drawWeatherSymbol(u8g2_uint_t x, u8g2_uint_t y, uint8_t symbol)
@@ -800,9 +824,12 @@ void buttonPressed()
         Serial.println("Pressed!");
         if (enterMenu == false) //if not enter the menu, then change the data
         {
-            if(weatherMenu) {
+            if (weatherMenu)
+            {
                 weatherMenu = false;
-            }else{
+            }
+            else
+            {
                 weatherMenu = true;
             }
         }
@@ -1012,7 +1039,7 @@ void readQuadrature()
             restMenuData();
         }
         int_nu = 0;
-        
+
         Serial.print("Item: ");
         Serial.println(currentItem);
         Serial.print("Menu: ");

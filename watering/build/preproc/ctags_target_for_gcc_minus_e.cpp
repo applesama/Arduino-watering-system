@@ -97,7 +97,7 @@ AvaliablePort arduinoPort; //instantiating it
 
 //U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE | U8G_I2C_OPT_DEV_0);
 //U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* clock=*/SCL, /* data=*/SDA, /* reset=*/U8X8_PIN_NONE); // All Boards without Reset of the Display
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2((&u8g2_cb_r0), /* reset=*/ 255);
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2((&u8g2_cb_r0), /* reset=*/255);
 class PlantSensor
 {
 public:
@@ -155,10 +155,17 @@ public:
         {
 
             digitalWrite(mServoPort, 0x1);
-            delay(5000);
-            digitalWrite(mServoPort, 0x0);
-            Serial.println("Watered!");
-            mWaterFlag = false;
+            if (lastWater == 0)
+            {
+                lastWater = millis();
+            }
+            if ((lastWater - millis()) > 5000)
+            {
+                digitalWrite(mServoPort, 0x0);
+                Serial.println("Watered!");
+                mWaterFlag = false;
+                lastWater = 0;
+            }
         }
     }
 
@@ -190,7 +197,7 @@ public:
         return mOptionFlag;
 
     }*/
-# 218 "f:\\WaterArduino\\watering\\watering.ino"
+# 225 "f:\\WaterArduino\\watering\\watering.ino"
     int getTempertureLowerLimit()
     {
         return mTemperatureInterval[0];
@@ -250,6 +257,7 @@ private:
     volatile bool mWaterFlag = false;
     volatile bool mRecordFlag = false;
     volatile bool mOptionFlag = false;
+    long lastWater = 0;
 };
 
 PlantSensor::PlantSensor(int port2, char *name, int port1) //name means which plant it is
@@ -300,12 +308,16 @@ uint8_t int_nu = 0; //for rotary encoder
 uint8_t flag = 0;
 
 long lastDebounceTime = 0;
+
 bool debounce = true;
+
+char *signalStrength = "";
 
 void setup()
 {
 
     Serial.begin(9600);
+    Serial1.begin(9600);
     pinMode(3 /*has been changed with B, if any bugs appear with encoder, check this*/, 0x0); //for encoder A pin and B pin
     pinMode(2, 0x0);
     pinMode(18, 0x2); //for te switch on encoder
@@ -313,7 +325,7 @@ void setup()
     attachInterrupt(0, readQuadrature, 1);
     attachInterrupt(5, buttonPressed, 0x0); //switch
     u8g2.begin();
-    Wire.begin();
+
     for (int i = 0; i < 4; i++)
     { //for test
         PlantSensor sensor(arduinoPort.getServoPort(), arduinoPort.getSensorName(), arduinoPort.getHumidityPort());
@@ -323,18 +335,16 @@ void setup()
 
 void loop()
 {
-    Wire.beginTransmission(8); /* begin with device address 8 */
-    Wire.write("update"); /* sends hello string */
-    Wire.endTransmission(); /* stop transmitting */
 
+    while (Serial1.read() >= 0)
+    {
+    };
+    Serial1.print("u");
     char *receivedData = "";
-    Wire.requestFrom(8, 13); /* request & read data of size 13 from slave */
-
-
-
     while (0 < Wire.available())
     {
         receivedData = receivedData + Wire.read();
+        delay(2);
     }
     if (strlen(receivedData) == 13)
     {
@@ -372,6 +382,15 @@ void loop()
         userData.innerTimeWhenUpdated = millis();
     }
 
+    Serial1.print("s");
+    receivedData = "";
+    while (0 < Wire.available())
+    {
+        receivedData = receivedData + Wire.read();
+        delay(2);
+    }
+    signalStrength = receivedData;
+
     Serial.print("receivedData: ");
     Serial.println(receivedData);
     Serial.print("Time: ");
@@ -385,20 +404,22 @@ void loop()
         debounce = true; //debounce
     }
 
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 4; i++)//Every loop will run this function to water the system
     {
         sensors[i].watering();
     }
 
     u8g2.clearBuffer();
+
     if (enterMenu == false)
     {
-        if(weatherMenu == false){
+        if (weatherMenu == false)
+        {
             drawHomePage();
         }
         else
         {
-            drawWeatherPage();
+            //drawWeatherPage();
         }
     }
     else
@@ -516,14 +537,17 @@ void drawHomePage()
 {
     uint8_t i, h;
 
-
     Serial.println("Home");
     u8g2.setFontRefHeightText(); // Ascent will be the ascent of "A" or "1" of the current font. Descent will be the descent "g" of the current font (this is the default after startup).
     u8g2.setFontPosTop(); //set the lefttop as  (0,0)
     u8g2.setFont(u8g2_font_open_iconic_all_1x_t);
     u8g2.drawGlyph(0, 2, 0x00f8); //signal sign
     u8g2.setFont(u8g2_font_6x13_tf);
+    u8g2.setCursor(10, 2);
+    u8g2.print(signalStrength);
+
     drawTime();
+
     u8g2.drawLine(u8g2.getDisplayWidth(), 16, 0, 16); //a horizontal line
     u8g2.drawLine(80, u8g2.getDisplayHeight(), 80, 16); //a vertical line
     int chk = DHT11.read(5 /*define the pin2 is the airTempHumidity sensor*/); //将读取到的值赋给chk
@@ -597,13 +621,15 @@ void drawWeatherPage()
 {
     Serial.println("Weather!");
     uint8_t i, h;
-    u8g2_uint_t d;
+
 
     u8g2.setFontRefHeightText(); // Ascent will be the ascent of "A" or "1" of the current font. Descent will be the descent "g" of the current font (this is the default after startup).
     u8g2.setFontPosTop(); //set the lefttop as  (0,0)
     u8g2.setFont(u8g2_font_open_iconic_all_1x_t);
-    u8g2.drawGlyph(d, 2, 0x00f8); //signal sign
+    u8g2.drawGlyph(2, 2, 0x00f8); //signal sign
     u8g2.setFont(u8g2_font_6x13_tf);
+    u8g2.setCursor(10, 2);
+    u8g2.print(signalStrength);
 
     drawTime();
     showWeather();
@@ -661,25 +687,25 @@ void drawTime()
     switch (userData.days)
     {
     case '1':
-        u8g2.drawStr(d + 60, 2, "Mon.");
+        u8g2.drawStr(d + 20, 20, "Mon.");
         break;
     case '2':
-        u8g2.drawStr(d + 60, 2, "Tues.");
+        u8g2.drawStr(d + 20, 20, "Tues.");
         break;
     case '3':
-        u8g2.drawStr(d + 60, 2, "Wed.");
+        u8g2.drawStr(d + 20, 20, "Wed.");
         break;
     case '4':
-        u8g2.drawStr(d + 60, 2, "Thur.");
+        u8g2.drawStr(d + 20, 20, "Thur.");
         break;
     case '5':
-        u8g2.drawStr(d + 60, 2, "Fri.");
+        u8g2.drawStr(d + 20, 20, "Fri.");
         break;
     case '6':
-        u8g2.drawStr(d + 60, 2, "Sat.");
+        u8g2.drawStr(d + 20, 20, "Sat.");
         break;
     case '0':
-        u8g2.drawStr(d + 60, 2, "Sun.");
+        u8g2.drawStr(d + 20, 20, "Sun.");
         break;
     }
 }
@@ -721,26 +747,21 @@ void drawWeather(uint8_t symbol, char *degree, char *city)
 
     drawWeatherSymbol(0, 48, symbol);
     u8g2.setFont(u8g2_font_5x7_tr);
-    u8g2.setCursor(51, 42);
+    u8g2.drawStr(20, 42, "Temp:");
+        u8g2.setCursor(51, 42);
     u8g2.print(degree);
     u8g2.print("oC");
-    //u8g2.setFont(u8g2_font_unifont_t_chinese3);
 
-    u8g2_uint_t strWidth = u8g2.getUTF8Width(city);
+    u8g2.drawStr(20, 48, "City:");
+        u8g2_uint_t strWidth = u8g2.getUTF8Width(city);
     u8g2_uint_t displayWidth = u8g2.getDisplayWidth();
-
     u8g2.setCursor(displayWidth - strWidth - 5, 60);
     u8g2.print(city);
-
 }
 
 void drawWeatherSymbol(u8g2_uint_t x, u8g2_uint_t y, uint8_t symbol)
 
 {
-    // fonts used:
-    // u8g2_font_open_iconic_embedded_6x_t
-    // u8g2_font_open_iconic_weather_6x_t
-    // encoding values, see: https://github.com/olikraus/u8g2/wiki/fntgrpiconic
     switch (symbol)
     {
     case 0: //太阳
@@ -779,9 +800,12 @@ void buttonPressed()
         Serial.println("Pressed!");
         if (enterMenu == false) //if not enter the menu, then change the data
         {
-            if(weatherMenu) {
+            if (weatherMenu)
+            {
                 weatherMenu = false;
-            }else{
+            }
+            else
+            {
                 weatherMenu = true;
             }
         }
