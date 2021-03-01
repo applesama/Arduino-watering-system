@@ -309,7 +309,6 @@ struct UserData
     char days;
     char *hours = 0;
     char *mins = 0;
-    char *seconds = 0;
     long innerTimeWhenUpdated = 0;
 };
 
@@ -318,7 +317,7 @@ UserData userData;
 bool enterMenu = false;       //if enter the menu
 bool weatherMenu = false;     // the menu that display weather
 bool signalOrWeather = false; // decide what data to request
-bool ifDataReady = false;     // decide if the data is ready to request
+
 const char *mainMenuItem[3] = {"Manual watering", "Auto-Watering settings", "Sensor records"};
 const char *menuItemFor3[4] = {"UpperTemputerture", "LowerTemputerture", "UpperHumidity", "LowerHumidity"};
 
@@ -333,16 +332,19 @@ uint8_t int_nu = 0; //for rotary encoder
 uint8_t flag = 0;
 
 long lastDebounceTime = 0;
+long lastRequestTime = 0;
 
+bool update = false;
 bool debounce = true;
 
 char *signalStrength = "";
+char *receivedData = "";
 
 void setup()
 {
 
     Serial.begin(9600);
-    Serial3.begin(9600);
+
     pinMode(A, INPUT); //for encoder A pin and B pin
     pinMode(B, INPUT);
     pinMode(C, INPUT_PULLUP); //for te switch on encoder
@@ -350,98 +352,90 @@ void setup()
     attachInterrupt(0, readQuadrature, CHANGE);
     attachInterrupt(5, buttonPressed, LOW); //switch
     u8g2.begin();
-
+    Wire.begin();
     for (int i = 0; i < 4; i++)
     { //for test
         PlantSensor sensor(arduinoPort.getServoPort(), arduinoPort.getSensorName(), arduinoPort.getHumidityPort());
         sensors.push_back(sensor);
     }
-    while (Serial3.read() >= 0)
-    {
-    };
 }
 
 void loop()
 {
-
-    
-
-    char *receivedData = "";
-    if (!ifDataReady)
+    if (!update)
     {
-        while (0 < Serial3.available())
+        bool YesOrNo;
+        Wire.beginTransmission(8);
+        Wire.write("ready");
+        Wire.endTransmission();
+
+        Wire.requestFrom(8, 1); //first, ask them if the data is ready.
+        YesOrNo = Wire.read();
+        if (YesOrNo)
         {
-            receivedData = receivedData + Serial3.read();
-            delay(2);
+            update = true;
         }
-        if (receivedData[0] == "R")
+        else
         {
-            ifDataReady = true;
-            Serial.print(receivedData);
-            Serial.print("ready");
-        }
-        receivedData = "";
-    }
-    else
-    {
-        receivedData = "";
-
-        if ((signalOrWeather) && (ifDataReady))
-        {
-            Serial3.print("u");
-
-            while (0 < Serial3.available())
-            {
-                receivedData = receivedData + Serial3.read();
-                delay(2);
-            }
-            if (strlen(receivedData) == 13)
-            {
-                for (int i = 0; i < 4; i++)
-                {
-                    userData.city[i] = receivedData[i]; //city
-                }
-
-                for (int i = 0; i < 2; i++)
-                {
-                    userData.weather_code[i] = receivedData[i + 4]; //weather code
-                }
-
-                for (int i = 0; i < 2; i++)
-                {
-                    userData.temp[i] = receivedData[i + 6]; // temperatuare
-                }
-
-                userData.days = receivedData[8]; //day
-
-                for (int i = 0; i < 2; i++)
-                {
-                    userData.hours[i] = receivedData[i + 8]; //hours
-                }
-
-                for (int i = 0; i < 2; i++)
-                {
-                    userData.mins[i] = receivedData[i + 10]; //mins
-                }
-
-                for (int i = 0; i < 2; i++)
-                {
-                    userData.seconds[i] = receivedData[i + 12]; //seconds
-                }
-                userData.innerTimeWhenUpdated = millis();
-            }
-        }
-        if (!signalOrWeather)
-        {
-            Serial3.print("s");
-            while (0 < Serial3.available())
-            {
-                receivedData = receivedData + Serial3.read();
-                delay(2);
-            }
-            signalStrength = receivedData;
+            update = false;
         }
     }
+    else if (update)
+    {
+        Wire.beginTransmission(8);
+        Wire.write("update");
+        Wire.endTransmission();
+        Wire.requestFrom(8, 11);
+
+        While(Wire.available())
+        {
+            receivedData = receivedData + Wire.read();
+        }
+
+        if (strlen(receivedData) == 11)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                userData.city[i] = receivedData[i]; //city
+            }
+
+            for (int i = 0; i < 2; i++)
+            {
+                userData.weather_code[i] = receivedData[i + 4]; //weather code
+            }
+
+            for (int i = 0; i < 2; i++)
+            {
+                userData.temp[i] = receivedData[i + 6]; // temperatuare
+            }
+
+            userData.days = receivedData[8]; //day
+
+            for (int i = 0; i < 2; i++)
+            {
+                userData.hours[i] = receivedData[i + 8]; //hours
+            }
+
+            for (int i = 0; i < 2; i++)
+            {
+                userData.mins[i] = receivedData[i + 10]; //mins
+            }
+
+            userData.innerTimeWhenUpdated = millis();
+        }
+    }
+
+    Wire.beginTransmission(8);
+    Wire.write("signal");
+    Wire.endTransmission();
+    Wire.requestFrom(8, 3);
+
+    While(Wire.available())
+    {
+        receivedData = receivedData + Wire.read();
+    }
+
+    signalStrength = receivedData;
 
     Serial.print("receivedData: ");
     Serial.println(receivedData);
@@ -449,6 +443,7 @@ void loop()
     //Serial.println(userData.days);
     Serial.print("temp: ");
     //Serial.println(userData.temp);
+    receivedData = "";
 
     if (lastDebounceTime > 500)
     {
@@ -731,9 +726,6 @@ void drawTime()
     u8g2.drawStr(d + 48, 2, ":");
     u8g2.setCursor(d + 50, 2);
     u8g2.print(userData.mins);
-    u8g2.drawStr(d + 56, 2, ":");
-    u8g2.setCursor(d + 58, 2);
-    u8g2.print(userData.seconds);
     switch (userData.days)
     {
     case '1':
@@ -795,18 +787,18 @@ void showWeather()
 void drawWeather(uint8_t symbol, char *degree, char *city)
 {
 
-    drawWeatherSymbol(0, 48, symbol);
+    drawWeatherSymbol(40, 45, symbol);
     u8g2.setFont(u8g2_font_5x7_tr);
     u8g2.drawStr(2, 17, "Temp:");
-    u8g2.setCursor(30, 17);
+    u8g2.setCursor(32, 17);
     u8g2.print(degree);
-    u8g2.setCursor(35, 20);
+    u8g2.setCursor(40, 17);
     u8g2.print("oC");
 
-    u8g2.drawStr(2, 37, "City:");
+    u8g2.drawStr(2, 27, "City:");
     u8g2_uint_t strWidth = u8g2.getUTF8Width(city);
     u8g2_uint_t displayWidth = u8g2.getDisplayWidth();
-    u8g2.setCursor(displayWidth - strWidth - 5, 37);
+    u8g2.setCursor(displayWidth - strWidth - 5, 27);
     u8g2.print(city);
 }
 

@@ -313,6 +313,7 @@ long lastDebounceTime = 0;
 bool debounce = true;
 
 char *signalStrength = "";
+char *receivedData = "";
 
 void setup()
 {
@@ -342,7 +343,7 @@ void loop()
 
 
 
-    char *receivedData = "";
+
     if (!ifDataReady)
     {
         while (0 < Serial3.available())
@@ -350,19 +351,19 @@ void loop()
             receivedData = receivedData + Serial3.read();
             delay(2);
         }
-        if (receivedData[0] == "R")
+        if (receivedData == "Ready")
         {
             ifDataReady = true;
             Serial.print(receivedData);
             Serial.print("ready");
         }
-        receivedData = "";
+
     }
     else
     {
-        receivedData = "";
 
-        if ((signalOrWeather) && (ifDataReady))
+
+        if (signalOrWeather)
         {
             Serial3.print("u");
 
@@ -425,8 +426,8 @@ void loop()
     //Serial.println(userData.days);
     Serial.print("temp: ");
     //Serial.println(userData.temp);
-
-    if (lastDebounceTime > 200)
+    receivedData = "";
+    if (lastDebounceTime > 500)
     {
         debounce = true; //debounce
     }
@@ -771,18 +772,18 @@ void showWeather()
 void drawWeather(uint8_t symbol, char *degree, char *city)
 {
 
-    drawWeatherSymbol(0, 48, symbol);
+    drawWeatherSymbol(40, 45, symbol);
     u8g2.setFont(u8g2_font_5x7_tr);
     u8g2.drawStr(2, 17, "Temp:");
-    u8g2.setCursor(30, 17);
+    u8g2.setCursor(32, 17);
     u8g2.print(degree);
-    u8g2.setCursor(35, 20);
+    u8g2.setCursor(40, 17);
     u8g2.print("oC");
 
-    u8g2.drawStr(2, 37, "City:");
+    u8g2.drawStr(2, 27, "City:");
     u8g2_uint_t strWidth = u8g2.getUTF8Width(city);
     u8g2_uint_t displayWidth = u8g2.getDisplayWidth();
-    u8g2.setCursor(displayWidth - strWidth - 5, 37);
+    u8g2.setCursor(displayWidth - strWidth - 5, 27);
     u8g2.print(city);
 }
 
