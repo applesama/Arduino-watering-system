@@ -278,7 +278,7 @@ PlantSensor::~PlantSensor()
 vector<PlantSensor> sensors;
 
 String city; //city name
-String weather_code = "0"; //code of weather
+String weather_code = "00"; //code of weather
 String temp = "0"; //temperature
 String days = "0";
 String hours = "00";
@@ -294,9 +294,9 @@ const char *menuItemFor3[4] = {"UpperTemputerture", "LowerTemputerture", "UpperH
 uint8_t currentMenu = 0; //different number reprensent different menu interface; 1:main menu 2:manual watering 3:record 4:record for each sensor 5:setting 6:setting for differnet sensor
 uint8_t currentPage = 0;
 uint8_t currentItem = 0;
-uint8_t currentItemForLastPage = 0; //record which item selected in last item;
+uint8_t currentItemForLastPage = 0; //recording which item was selected in last item;
 
-uint8_t sensorThatCurrentHave = 0; //how many sensor we have
+uint8_t sensorThatCurrentHave = 0; //how many sensors we have
 
 uint8_t int_nu = 0; //for rotary encoder
 uint8_t flag = 0;
@@ -306,9 +306,10 @@ long lastRequestTime = 0;
 
 bool update = false;
 bool debounce = true;
+bool ifConnected = false; // see if two device are connected
 
-char *signalStrength = "";
-
+String signalStrength = "00%";
+uint8_t connectionCountdown = 5;
 String receivedData = "";
 
 void setup()
@@ -334,31 +335,61 @@ void setup()
 void loop()
 {
 
+    connection();
+
     if (!update)
     {
-        char YesOrNo = 0;
+        String YesOrNo = "0";
 
-        Serial.print("ready");
 
-        Serial3.write("ready?");
-        delay(10);
-        //Wire.requestFrom(8, 1); //first, ask them if the data is ready.
+        if(Serial3.available() == 0){
+            Serial3.write("ready?");
+            delay(10);
+            Serial.println("Print!");
+        }
+
+
+        bool flag = true; // make sure the next Serial only read one bit in one time
 
         while (Serial3.available() > 0)
         {
             delay(2);
-            YesOrNo = (char)Serial3.read();
+            receivedData = receivedData + (char)Serial3.read();
         }
+        Serial.print("[");
+        Serial.print(receivedData);
+        Serial.println("]");
+        YesOrNo = receivedData.substring(0, 1);
+
+
+        if ((receivedData.length() == 3)||(receivedData.length() == 4))
+        {
+            signalStrength = receivedData.substring(1);
+
+            connectionCountdown = 5;
+        }
+        else
+        {
+            connectionCountdown --;
+        }
+
         Serial.print("YesOrNo ");
         Serial.print(YesOrNo);
         Serial.print(" YesOrNo");
-        if (YesOrNo == '1')
+
+        if (YesOrNo == "1")
         {
-            if (!update)
-                Serial.print("NOT!");
+
             Serial.println("True");
             update = true;
+
         }
+        else if (YesOrNo == "")
+        {
+            connectionCountdown --;
+        }
+
+        //delay(1000);
 
         /*while(Serial3.available() > 0)
 
@@ -367,7 +398,7 @@ void loop()
             Serial3.read();
 
         }*/
-# 391 "f:\\WaterArduino\\watering\\watering.ino"
+# 424 "f:\\WaterArduino\\watering\\watering.ino"
     }
     else if (update)
     {
@@ -379,7 +410,7 @@ void loop()
         Wire.endTransmission();
 
         Wire.requestFrom(8, 11);*/
-# 399 "f:\\WaterArduino\\watering\\watering.ino"
+# 432 "f:\\WaterArduino\\watering\\watering.ino"
         Serial3.print("update");
         delay(50);
         while (Serial3.available() > 0)
@@ -392,8 +423,10 @@ void loop()
         Serial.println(receivedData);
 
         char *tempData = receivedData.c_str();
-
-        if (receivedData.length() == 13)
+        if(receivedData.length() == 19){// sometimes the string will receive 3 more chars that not belongs here, we should delete them 
+            receivedData = receivedData.substring(0, 4);
+        }
+        if ((receivedData.length() == 16)||(receivedData.length() == 17))
         { //Serial.println(receivedData.substring(0, 4).c_str());
 
             city = receivedData.substring(0, 4); //city
@@ -407,15 +440,22 @@ void loop()
 
             hours = receivedData.substring(9, 11); //hours
 
-            mins = receivedData.substring(11); //mins
+            mins = receivedData.substring(11, 13); //mins
+
+            signalStrength = receivedData.substring(13);
 
             //innerTimeWhenUpdated = millis();
         }
 
         update = false;
+        ifConnected = true;
         //Serial.print(receivedData);
+        if (signalStrength == "00%")
+        {
+            connectionCountdown --;
+        }else {connectionCountdown = 5;}
     }
-    //receivedData = "";
+    receivedData = "";
     /*
 
     Wire.beginTransmission(8);
@@ -427,28 +467,13 @@ void loop()
     Wire.requestFrom(8, 3);
 
     */
-# 441 "f:\\WaterArduino\\watering\\watering.ino"
-    delay(10);
-    /*while(Serial3.available() > 0)
-
-    {   
-
-        delay(2);
-
-        receivedData = receivedData + Serial3.read();
-
-    }
-
-
-
-    signalStrength = receivedData;*/
-# 450 "f:\\WaterArduino\\watering\\watering.ino"
+# 484 "f:\\WaterArduino\\watering\\watering.ino"
     Serial.print("receivedData: ");
     Serial.println(receivedData);
     Serial.println("Time: ");
     Serial.println(days);
     Serial.print("temp: ");
-    Serial.println(city);
+    Serial.println(weather_code);
     receivedData = "";
 
     if ((millis() - lastDebounceTime) > 500)
@@ -594,13 +619,14 @@ void drawHomePage()
     //Serial.println("Home");
     u8g2.setFontRefHeightText(); // Ascent will be the ascent of "A" or "1" of the current font. Descent will be the descent "g" of the current font (this is the default after startup).
     u8g2.setFontPosTop(); //set the lefttop as  (0,0)
-    u8g2.setFont(u8g2_font_open_iconic_all_1x_t);
-    u8g2.drawGlyph(0, 2, 0x00f8); //signal sign
+    u8g2.setFont(u8g2_font_open_iconic_www_1x_t);
+    u8g2.drawGlyph(0, 2, 72); //signal sign
     u8g2.setFont(u8g2_font_6x13_tf);
     u8g2.setCursor(10, 2);
     u8g2.print(signalStrength);
 
     drawTime();
+    drawConnectionIcon();
 
     u8g2.drawLine(u8g2.getDisplayWidth(), 16, 0, 16); //a horizontal line
     u8g2.drawLine(80, u8g2.getDisplayHeight(), 80, 16); //a vertical line
@@ -678,14 +704,15 @@ void drawWeatherPage()
 
     u8g2.setFontRefHeightText(); // Ascent will be the ascent of "A" or "1" of the current font. Descent will be the descent "g" of the current font (this is the default after startup).
     u8g2.setFontPosTop(); //set the lefttop as  (0,0)
-    u8g2.setFont(u8g2_font_open_iconic_all_1x_t);
-    u8g2.drawGlyph(0, 2, 0x00f8); //signal sign
+    u8g2.setFont(u8g2_font_open_iconic_www_1x_t);
+    u8g2.drawGlyph(0, 2, 72); //signal sign
     u8g2.setFont(u8g2_font_6x13_tf);
     u8g2.setCursor(10, 2);
     u8g2.print(signalStrength);
 
     drawTime();
     showWeather();
+    drawConnectionIcon();
 
     u8g2.drawLine(u8g2.getDisplayWidth(), 16, 0, 16); //a horizontal line
     u8g2.drawLine(80, u8g2.getDisplayHeight(), 80, 16); //a vertical line
@@ -728,11 +755,12 @@ void drawWeatherPage()
 
 void drawTime()
 {
+
     u8g2_uint_t d = 2;
-    u8g2.setCursor(d + 40, 2);
+    u8g2.setCursor(d + 35, 2);
     u8g2.print(hours);
-    u8g2.drawStr(d + 52, 2, ":");
-    u8g2.setCursor(d + 57, 2);
+    u8g2.drawStr(d + 47, 2, ":");
+    u8g2.setCursor(d + 53, 2);
     u8g2.print(mins);
 
     if (days == "0")
@@ -767,19 +795,19 @@ void drawTime()
 
 void showWeather()
 {
-    if (weather_code == "0" /*晴（国内城市白天晴）*/ || weather_code == "2" /*晴（国外城市白天晴）*/)
+    if (weather_code == "00" /*晴（国内城市白天晴）*/ || weather_code == "02" /*晴（国外城市白天晴）*/)
     {
         drawWeather(0, temp.c_str(), city.c_str());
     }
-    else if (weather_code == "1" /*晴（国内城市夜晚晴）*/ || weather_code == "3" /*晴（国外城市夜晚晴）*/)
+    else if (weather_code == "01" /*晴（国内城市夜晚晴）*/ || weather_code == "03" /*晴（国外城市夜晚晴）*/)
     {
         drawWeather(1, temp.c_str(), city.c_str());
     }
-    else if (weather_code == "5" /*白天晴间多云*/ || weather_code == "6" /*夜晚晴间多云*/)
+    else if (weather_code == "05" /*白天晴间多云*/ || weather_code == "06" /*夜晚晴间多云*/)
     {
         drawWeather(2, temp.c_str(), city.c_str());
     }
-    else if (weather_code == "4" /*多云*/ || weather_code == "7" /*白天大部多云*/ || weather_code == "8" /*夜晚大部多云*/ || weather_code == "9" /*阴*/)
+    else if (weather_code == "04" /*多云*/ || weather_code == "07" /*白天大部多云*/ || weather_code == "08" /*夜晚大部多云*/ || weather_code == "09" /*阴*/)
     {
         drawWeather(3, temp.c_str(), city.c_str());
     }
@@ -800,19 +828,20 @@ void showWeather()
 void drawWeather(uint8_t symbol, char *degree, char *city)
 {
 
-    drawWeatherSymbol(30, 30, symbol);
+    //u8g2_font_5x7_tr
     u8g2.setFont(u8g2_font_5x7_tr);
     u8g2.drawStr(2, 17, "Temp:");
-    u8g2.setCursor(32, 17);
+    u8g2.setCursor(27, 17);
     u8g2.print(degree);
-    u8g2.setCursor(40, 17);
+    u8g2.setCursor(37, 17);
     u8g2.print("oC");
 
     u8g2.drawStr(2, 27, "City:");
     u8g2_uint_t strWidth = u8g2.getUTF8Width(city);
     u8g2_uint_t displayWidth = u8g2.getDisplayWidth();
-    u8g2.setCursor(displayWidth - strWidth - 5, 27);
+    u8g2.setCursor(2, 37);
     u8g2.print(city);
+    drawWeatherSymbol(47, 30, symbol);
 }
 
 void drawWeatherSymbol(u8g2_uint_t x, u8g2_uint_t y, uint8_t symbol)
@@ -821,29 +850,43 @@ void drawWeatherSymbol(u8g2_uint_t x, u8g2_uint_t y, uint8_t symbol)
     switch (symbol)
     {
     case 0: //太阳
-        u8g2.setFont(u8g2_font_open_iconic_weather_6x_t);
+        u8g2.setFont(u8g2_font_open_iconic_weather_4x_t);
         u8g2.drawGlyph(x, y, 69);
         break;
     case 1: //太阳
-        u8g2.setFont(u8g2_font_open_iconic_weather_6x_t);
+        u8g2.setFont(u8g2_font_open_iconic_weather_4x_t);
         u8g2.drawGlyph(x, y, 66);
         break;
     case 2: //晴间多云
-        u8g2.setFont(u8g2_font_open_iconic_weather_6x_t);
+        u8g2.setFont(u8g2_font_open_iconic_weather_4x_t);
         u8g2.drawGlyph(x, y, 65);
         break;
     case 3: //多云
-        u8g2.setFont(u8g2_font_open_iconic_weather_6x_t);
+        u8g2.setFont(u8g2_font_open_iconic_weather_4x_t);
         u8g2.drawGlyph(x, y, 64);
         break;
     case 4: //下雨
-        u8g2.setFont(u8g2_font_open_iconic_weather_6x_t);
+        u8g2.setFont(u8g2_font_open_iconic_weather_4x_t);
         u8g2.drawGlyph(x, y, 67);
         break;
     case 5: //打雷
-        u8g2.setFont(u8g2_font_open_iconic_embedded_6x_t);
+        u8g2.setFont(u8g2_font_open_iconic_embedded_4x_t);
         u8g2.drawGlyph(x, y, 67);
         break;
+    }
+}
+
+void drawConnectionIcon()
+{
+    if (ifConnected)
+    {
+        u8g2.setFont(u8g2_font_open_iconic_www_1x_t);
+        u8g2.drawGlyph(112, 3, 79);
+    }
+    else
+    {
+        u8g2.setFont(u8g2_font_open_iconic_www_1x_t);
+        u8g2.drawGlyph(112, 3, 69);
     }
 }
 
@@ -1077,6 +1120,14 @@ void readQuadrature()
         Serial.print("Menu: ");
         Serial.println(currentMenu);
         Serial.println("--------");
+    }
+}
+
+void connection(){
+    if(connectionCountdown == 0){
+        ifConnected = false;
+    }else{
+        ifConnected = true;
     }
 }
 
