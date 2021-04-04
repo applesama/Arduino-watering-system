@@ -333,7 +333,7 @@ bool debounce = true;
 bool ifConnected = false; // see if two device are connected
 
 String signalStrength = "00%";
-uint8_t connectionCountdown = 5;
+uint8_t connectionCountdown = 0;
 String receivedData = "";
 
 void setup()
@@ -372,7 +372,6 @@ void loop()
             Serial.println("Print!");
         }
         
-
         bool flag = true; // make sure the next Serial only read one bit in one time
 
         while (Serial3.available() > 0)
@@ -392,7 +391,7 @@ void loop()
             
             connectionCountdown = 5;
         }
-        else
+        else if(connectionCountdown > 0)
         {
             connectionCountdown --;
         }
@@ -408,7 +407,7 @@ void loop()
             update = true;
             
         }
-        else if (YesOrNo == "")
+        else if ((YesOrNo == "")&&(connectionCountdown > 0))
         {
             connectionCountdown --;
         }
@@ -466,9 +465,9 @@ void loop()
         }
 
         update = false;
-        ifConnected = true;
+        
         //Serial.print(receivedData);
-        if (signalStrength == "00%")
+        if ((signalStrength == "00%")&&(connectionCountdown > 0))
         {
             connectionCountdown --;
         }else {connectionCountdown = 5;}
@@ -776,31 +775,31 @@ void drawTime()
     u8g2.setCursor(d + 53, 2);
     u8g2.print(mins);
 
-    if (days == "0")
+    if (days == "1")
     {
         u8g2.drawStr(d + 70, 2, "Mon.");
     }
-    else if (days == "1")
+    else if (days == "2")
     {
         u8g2.drawStr(d + 70, 2, "Tues.");
     }
-    else if (days == "2")
+    else if (days == "3")
     {
         u8g2.drawStr(d + 70, 2, "Wed.");
     }
-    else if (days == "3")
+    else if (days == "4")
     {
         u8g2.drawStr(d + 70, 2, "Thur.");
     }
-    else if (days == "4")
+    else if (days == "5")
     {
         u8g2.drawStr(d + 70, 2, "Fri.");
     }
-    else if (days == "5")
+    else if (days == "6")
     {
         u8g2.drawStr(d + 70, 2, "Sat.");
     }
-    else if (days == "6")
+    else if (days == "0")
     {
         u8g2.drawStr(d + 70, 2, "Sun.");
     }
@@ -1137,9 +1136,12 @@ void readQuadrature()
 }
 
 void connection(){
+    Serial.print(connectionCountdown);
+    
     if(connectionCountdown == 0){
         ifConnected = false;
-    }else{
+        signalStrength = "00%";
+    }else {
         ifConnected = true;
     }
 }

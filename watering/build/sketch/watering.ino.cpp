@@ -335,38 +335,38 @@ bool debounce = true;
 bool ifConnected = false; // see if two device are connected
 
 String signalStrength = "00%";
-uint8_t connectionCountdown = 5;
+uint8_t connectionCountdown = 0;
 String receivedData = "";
 
 #line 339 "f:\\WaterArduino\\watering\\watering.ino"
 void setup();
 #line 359 "f:\\WaterArduino\\watering\\watering.ino"
 void loop();
-#line 527 "f:\\WaterArduino\\watering\\watering.ino"
+#line 526 "f:\\WaterArduino\\watering\\watering.ino"
 void drawMenu();
-#line 628 "f:\\WaterArduino\\watering\\watering.ino"
+#line 627 "f:\\WaterArduino\\watering\\watering.ino"
 void drawHomePage();
-#line 713 "f:\\WaterArduino\\watering\\watering.ino"
+#line 712 "f:\\WaterArduino\\watering\\watering.ino"
 void drawWeatherPage();
-#line 769 "f:\\WaterArduino\\watering\\watering.ino"
+#line 768 "f:\\WaterArduino\\watering\\watering.ino"
 void drawTime();
-#line 809 "f:\\WaterArduino\\watering\\watering.ino"
+#line 808 "f:\\WaterArduino\\watering\\watering.ino"
 void showWeather();
-#line 841 "f:\\WaterArduino\\watering\\watering.ino"
+#line 840 "f:\\WaterArduino\\watering\\watering.ino"
 void drawWeather(uint8_t symbol, char *degree, char *city);
-#line 860 "f:\\WaterArduino\\watering\\watering.ino"
+#line 859 "f:\\WaterArduino\\watering\\watering.ino"
 void drawWeatherSymbol(u8g2_uint_t x, u8g2_uint_t y, uint8_t symbol);
-#line 892 "f:\\WaterArduino\\watering\\watering.ino"
+#line 891 "f:\\WaterArduino\\watering\\watering.ino"
 void drawConnectionIcon();
-#line 906 "f:\\WaterArduino\\watering\\watering.ino"
+#line 905 "f:\\WaterArduino\\watering\\watering.ino"
 void buttonPressed();
-#line 1043 "f:\\WaterArduino\\watering\\watering.ino"
+#line 1042 "f:\\WaterArduino\\watering\\watering.ino"
 void readQuadrature();
-#line 1139 "f:\\WaterArduino\\watering\\watering.ino"
+#line 1138 "f:\\WaterArduino\\watering\\watering.ino"
 void connection();
-#line 1147 "f:\\WaterArduino\\watering\\watering.ino"
+#line 1149 "f:\\WaterArduino\\watering\\watering.ino"
 void restMenuData();
-#line 1155 "f:\\WaterArduino\\watering\\watering.ino"
+#line 1157 "f:\\WaterArduino\\watering\\watering.ino"
 void autoWatering();
 #line 339 "f:\\WaterArduino\\watering\\watering.ino"
 void setup()
@@ -405,7 +405,6 @@ void loop()
             Serial.println("Print!");
         }
         
-
         bool flag = true; // make sure the next Serial only read one bit in one time
 
         while (Serial3.available() > 0)
@@ -425,7 +424,7 @@ void loop()
             
             connectionCountdown = 5;
         }
-        else
+        else if(connectionCountdown > 0)
         {
             connectionCountdown --;
         }
@@ -441,7 +440,7 @@ void loop()
             update = true;
             
         }
-        else if (YesOrNo == "")
+        else if ((YesOrNo == "")&&(connectionCountdown > 0))
         {
             connectionCountdown --;
         }
@@ -499,9 +498,9 @@ void loop()
         }
 
         update = false;
-        ifConnected = true;
+        
         //Serial.print(receivedData);
-        if (signalStrength == "00%")
+        if ((signalStrength == "00%")&&(connectionCountdown > 0))
         {
             connectionCountdown --;
         }else {connectionCountdown = 5;}
@@ -809,31 +808,31 @@ void drawTime()
     u8g2.setCursor(d + 53, 2);
     u8g2.print(mins);
 
-    if (days == "0")
+    if (days == "1")
     {
         u8g2.drawStr(d + 70, 2, "Mon.");
     }
-    else if (days == "1")
+    else if (days == "2")
     {
         u8g2.drawStr(d + 70, 2, "Tues.");
     }
-    else if (days == "2")
+    else if (days == "3")
     {
         u8g2.drawStr(d + 70, 2, "Wed.");
     }
-    else if (days == "3")
+    else if (days == "4")
     {
         u8g2.drawStr(d + 70, 2, "Thur.");
     }
-    else if (days == "4")
+    else if (days == "5")
     {
         u8g2.drawStr(d + 70, 2, "Fri.");
     }
-    else if (days == "5")
+    else if (days == "6")
     {
         u8g2.drawStr(d + 70, 2, "Sat.");
     }
-    else if (days == "6")
+    else if (days == "0")
     {
         u8g2.drawStr(d + 70, 2, "Sun.");
     }
@@ -1170,9 +1169,12 @@ void readQuadrature()
 }
 
 void connection(){
+    Serial.print(connectionCountdown);
+    
     if(connectionCountdown == 0){
         ifConnected = false;
-    }else{
+        signalStrength = "00%";
+    }else {
         ifConnected = true;
     }
 }
