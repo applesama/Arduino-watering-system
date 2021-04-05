@@ -308,6 +308,7 @@ String days = "0";
 String hours = "00";
 String mins = "00";
 
+bool lcdBackLight = true; //back light
 bool enterMenu = false;       //if enter the menu
 bool weatherMenu = false;     // the menu that display weather
 bool signalOrWeather = false; // decide what data to request
@@ -326,7 +327,8 @@ uint8_t int_nu = 0; //for rotary encoder
 uint8_t flag = 0;
 
 long lastDebounceTime = 0;
-long lastRequestTime = 0;
+long menuStandbyTime = 0;
+long lcdStandbyTime = 0;
 
 bool update = false;
 bool debounce = true;
@@ -358,6 +360,12 @@ void setup()
 
 void loop()
 {
+    if((millis() - menuStandbyTime) >10000){
+        enterMenu = false;
+    }
+    if(((millis() - lcdStandbyTime) >30000)&&(!enterMenu)){
+        u8g2.setPowerSave(0);
+    }
     
     connection();
 
@@ -488,7 +496,7 @@ void loop()
     Serial.println(weather_code);
     receivedData = "";
 
-    if ((millis() - lastDebounceTime) > 500)
+    if ((millis() - lastDebounceTime) > 100)
     {
         debounce = true; //debounce
     }
@@ -906,11 +914,14 @@ void buttonPressed()
 {
     if (debounce)
     {
+        u8g2.setPowerSave(1);
+        lcdStandbyTime = millis();
         lastDebounceTime = millis();
 
         Serial.println("Pressed!");
         if (enterMenu == false) //if not enter the menu, then change the data
         {
+            
             if (weatherMenu)
             {
                 weatherMenu = false;
@@ -922,6 +933,7 @@ void buttonPressed()
         }
         else
         {
+            menuStandbyTime = millis();
             switch (currentMenu)
             {       //different number reprensent different menu interface; 1:main menu 2:manual watering 3:record 4:record for each sensor 5:setting 6:setting for differnet sensor 7:adjust menu
             case 0: //main menu
@@ -1041,6 +1053,9 @@ void buttonPressed()
 
 void readQuadrature()
 {
+    u8g2.setPowerSave(1);
+    lcdStandbyTime = millis();
+    menuStandbyTime = millis();
     if (int_nu == 0 && digitalRead(A) == LOW)
     {
 
