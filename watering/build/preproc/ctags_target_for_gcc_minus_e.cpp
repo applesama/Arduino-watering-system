@@ -4,12 +4,20 @@
 # 4 "f:\\WaterArduino\\watering\\watering.ino" 2
 # 5 "f:\\WaterArduino\\watering\\watering.ino" 2
 # 6 "f:\\WaterArduino\\watering\\watering.ino" 2
+# 7 "f:\\WaterArduino\\watering\\watering.ino" 2
 
-# 8 "f:\\WaterArduino\\watering\\watering.ino" 2
+
+# 10 "f:\\WaterArduino\\watering\\watering.ino" 2
 
 
 using namespace std;
-# 43 "f:\\WaterArduino\\watering\\watering.ino"
+# 45 "f:\\WaterArduino\\watering\\watering.ino"
+union limits
+{
+    int realLimits;
+    byte storeFlag[2];
+}; //using a union so that we can store int in eeprom
+
 dht11 DHT11; //create the dht11 sensor
 
 class AvaliablePort
@@ -103,39 +111,69 @@ class PlantSensor
 public:
     void setTempertureLowerLimit(int lowerLimit)
     {
-        mTemperatureInterval[0] = lowerLimit;
+        mTemperatureInterval[0].realLimits = lowerLimit;
+        EEPROM.update(mEeprom, mTemperatureInterval[0].storeFlag[0]);
+        EEPROM.update(mEeprom + 1, mTemperatureInterval[0].storeFlag[1]);
     }
 
     void setTempertureUpperLimit(int upperLimit)
     {
-        mTemperatureInterval[1] = upperLimit;
+        mTemperatureInterval[1].realLimits = upperLimit;
+        EEPROM.update(mEeprom + 2, mTemperatureInterval[1].storeFlag[0]);
+        EEPROM.update(mEeprom + 3, mTemperatureInterval[1].storeFlag[1]);
     }
 
     void setHumidityLowerLimit(int lowerLimit)
     {
-        mHumidityInterval[0] = lowerLimit;
+        mHumidityInterval[0].realLimits = lowerLimit;
+        EEPROM.update(mEeprom + 4, mHumidityInterval[0].storeFlag[0]);
+        EEPROM.update(mEeprom + 5, mHumidityInterval[0].storeFlag[1]);
     }
 
     void setHumidityUpperLimit(int upperLimit)
     {
-        mHumidityInterval[1] = upperLimit;
+        mHumidityInterval[1].realLimits = upperLimit;
+        EEPROM.update(mEeprom + 6, mHumidityInterval[1].storeFlag[0]);
+        EEPROM.update(mEeprom + 7, mHumidityInterval[1].storeFlag[1]);
     }
 
     void setCurrentHumidity()
     {
-        mCurrentHumidity = analogRead(mSensorPort);
+        if (mWaterFlag)
+        {
+            long temps = analogRead(mSensorPort);
+            mCurrentHumidity = (100 - ((temps * 100) / 614));
+        }
     }
 
-    void ResetDaysSinceLastWatering()
+    void readSavedSettings()
     {
+        mTemperatureInterval[0].storeFlag[0] = EEPROM.read(mEeprom);
+        mTemperatureInterval[0].storeFlag[1] = EEPROM.read(mEeprom + 1);
+        mTemperatureInterval[1].storeFlag[0] = EEPROM.read(mEeprom + 2);
+        mTemperatureInterval[1].storeFlag[1] = EEPROM.read(mEeprom + 3);
+        mHumidityInterval[0].storeFlag[0] = EEPROM.read(mEeprom + 4);
+        mHumidityInterval[0].storeFlag[1] = EEPROM.read(mEeprom + 5);
+        mHumidityInterval[1].storeFlag[0] = EEPROM.read(mEeprom + 6);
+        mHumidityInterval[1].storeFlag[1] = EEPROM.read(mEeprom + 7);
+    }
+
+    /*void ResetDaysSinceLastWatering()
+
+    {
+
         mDaysSinceLastWatering = 0;
-    }
 
-    void DaysPlusOne()
+    }*/
+# 196 "f:\\WaterArduino\\watering\\watering.ino"
+    /*void DaysPlusOne()
+
     {
-        mDaysSinceLastWatering++;
-    }
 
+        mDaysSinceLastWatering++;
+
+    }*/
+# 201 "f:\\WaterArduino\\watering\\watering.ino"
     void setSensorPort(int port)
     {
         mSensorPort = port;
@@ -159,10 +197,10 @@ public:
             {
                 lastWater = millis();
             }
-            if ((lastWater - millis()) > 5000)
+            if ((millis() - lastWater) > 3000)
             {
                 digitalWrite(mServoPort, 0x0);
-                Serial.println("Watered!");
+                //Serial.println("Watered!");
                 mWaterFlag = false;
                 lastWater = 0;
             }
@@ -197,41 +235,55 @@ public:
         return mOptionFlag;
 
     }*/
-# 225 "f:\\WaterArduino\\watering\\watering.ino"
+# 257 "f:\\WaterArduino\\watering\\watering.ino"
     int getTempertureLowerLimit()
     {
-        return mTemperatureInterval[0];
+        mTemperatureInterval[0].storeFlag[0] = EEPROM.read(mEeprom);
+        mTemperatureInterval[0].storeFlag[1] = EEPROM.read(mEeprom + 1);
+        return mTemperatureInterval[0].realLimits;
     }
 
     int getTempertureUpperLimit()
     {
-        return mTemperatureInterval[1];
+        mTemperatureInterval[1].storeFlag[0] = EEPROM.read(mEeprom + 2);
+        mTemperatureInterval[1].storeFlag[1] = EEPROM.read(mEeprom + 3);
+        return mTemperatureInterval[1].realLimits;
     }
 
     int getHumidityLowerLimit()
     {
-        return mHumidityInterval[0];
+        mHumidityInterval[0].storeFlag[0] = EEPROM.read(mEeprom + 4);
+        mHumidityInterval[0].storeFlag[1] = EEPROM.read(mEeprom + 5);
+        return mHumidityInterval[0].realLimits;
     }
 
     int getHumidityUpperLimit()
     {
-        return mHumidityInterval[1];
+        mHumidityInterval[1].storeFlag[0] = EEPROM.read(mEeprom + 6);
+        mHumidityInterval[1].storeFlag[1] = EEPROM.read(mEeprom + 7);
+        return mHumidityInterval[1].realLimits;
     }
 
     int getCurrentHumidity()
     {
         return mCurrentHumidity;
     }
-    int setCurrentTemperture(int temp)
-    {
-        return mCurrentTemperture;
-    }
+    /*int setCurrentTemperture(int temp)
 
-    int getDaysSinceLastWatering()
     {
+
+        return mCurrentTemperture.realLimits;
+
+    }*/
+# 294 "f:\\WaterArduino\\watering\\watering.ino"
+    /*int getDaysSinceLastWatering()
+
+    {
+
         return mDaysSinceLastWatering;
-    }
 
+    }*/
+# 299 "f:\\WaterArduino\\watering\\watering.ino"
     int getSensorPort()
     {
         return mSensorPort;
@@ -251,7 +303,8 @@ public:
     ~PlantSensor();
 
 private:
-    int mTemperatureInterval[2], mHumidityInterval[2], mCurrentTemperture, mCurrentHumidity, mDaysSinceLastWatering;
+    limits mTemperatureInterval[2], mHumidityInterval[2];
+    int mCurrentTemperture, mCurrentHumidity, mEeprom; //mDaysSinceLastWatering;
     char *mName;
     int mSensorPort, mServoPort;
     volatile bool mWaterFlag = false;
@@ -261,12 +314,14 @@ private:
 };
 
 PlantSensor::PlantSensor(int port2, char *name, int port1) //name means which plant it is
-{ //first is sensor port and second one is servo
+{
+    //first is sensor port and second one is servo
     mSensorPort = port1;
     mServoPort = port2;
+    mEeprom = (8 * (mSensorPort + mServoPort) - 272);
     mCurrentTemperture = 0;
     mCurrentHumidity = 0;
-    mDaysSinceLastWatering = 0;
+    //mDaysSinceLastWatering = 0;
     mName = name;
 }
 
@@ -284,6 +339,7 @@ String days = "0";
 String hours = "00";
 String mins = "00";
 
+//bool lcdBackLight = true; //back light
 bool enterMenu = false; //if enter the menu
 bool weatherMenu = false; // the menu that display weather
 bool signalOrWeather = false; // decide what data to request
@@ -295,6 +351,7 @@ uint8_t currentMenu = 0; //different number reprensent different menu interface;
 uint8_t currentPage = 0;
 uint8_t currentItem = 0;
 uint8_t currentItemForLastPage = 0; //recording which item was selected in last item;
+uint8_t sensorID = 0;
 
 uint8_t sensorThatCurrentHave = 0; //how many sensors we have
 
@@ -302,7 +359,8 @@ uint8_t int_nu = 0; //for rotary encoder
 uint8_t flag = 0;
 
 long lastDebounceTime = 0;
-long lastRequestTime = 0;
+long menuStandbyTime = 0;
+//long lcdStandbyTime = 0;
 
 bool update = false;
 bool debounce = true;
@@ -324,6 +382,7 @@ void setup()
     attachInterrupt(0, readQuadrature, 1);
     attachInterrupt(5, buttonPressed, 0x0); //switch
     u8g2.begin();
+    readSettings();
     //Wire.begin();
     for (int i = 0; i < 4; i++)
     { //for test
@@ -334,18 +393,26 @@ void setup()
 
 void loop()
 {
-
+    if ((millis() - menuStandbyTime) > 10000)
+    {
+        enterMenu = false;
+    }
+    //if(((millis() - lcdStandbyTime) >30000)&&(!enterMenu)){
+    // u8g2.setPowerSave(0);
+    //}
+    autoWatering();
     connection();
+    readMoisture();
 
     if (!update)
     {
         String YesOrNo = "0";
 
-
-        if(Serial3.available() == 0){
+        if (Serial3.available() == 0)
+        {
             Serial3.write("ready?");
             delay(10);
-            Serial.println("Print!");
+            //Serial.println("Print!");
         }
 
         bool flag = true; // make sure the next Serial only read one bit in one time
@@ -355,37 +422,35 @@ void loop()
             delay(2);
             receivedData = receivedData + (char)Serial3.read();
         }
-        Serial.print("[");
-        Serial.print(receivedData);
-        Serial.println("]");
+        //Serial.print("[");
+        //Serial.print(receivedData);
+        //Serial.println("]");
         YesOrNo = receivedData.substring(0, 1);
 
-
-        if ((receivedData.length() == 3)||(receivedData.length() == 4))
+        if ((receivedData.length() == 3) || (receivedData.length() == 4))
         {
             signalStrength = receivedData.substring(1);
 
             connectionCountdown = 5;
         }
-        else if(connectionCountdown > 0)
+        else if (connectionCountdown > 0)
         {
-            connectionCountdown --;
+            connectionCountdown--;
         }
 
-        Serial.print("YesOrNo ");
-        Serial.print(YesOrNo);
-        Serial.print(" YesOrNo");
+        //Serial.print("YesOrNo ");
+        //Serial.print(YesOrNo);
+        //Serial.print(" YesOrNo");
 
         if (YesOrNo == "1")
         {
 
-            Serial.println("True");
+            //Serial.println("True");
             update = true;
-
         }
-        else if ((YesOrNo == "")&&(connectionCountdown > 0))
+        else if ((YesOrNo == "") && (connectionCountdown > 0))
         {
-            connectionCountdown --;
+            connectionCountdown--;
         }
 
         //delay(1000);
@@ -397,11 +462,11 @@ void loop()
             Serial3.read();
 
         }*/
-# 423 "f:\\WaterArduino\\watering\\watering.ino"
+# 474 "f:\\WaterArduino\\watering\\watering.ino"
     }
     else if (update)
     {
-        Serial.print("updated!");
+        //Serial.print("updated!");
         /*Wire.beginTransmission(8);
 
         Wire.write("update");
@@ -409,7 +474,7 @@ void loop()
         Wire.endTransmission();
 
         Wire.requestFrom(8, 11);*/
-# 431 "f:\\WaterArduino\\watering\\watering.ino"
+# 482 "f:\\WaterArduino\\watering\\watering.ino"
         Serial3.print("update");
         delay(50);
         while (Serial3.available() > 0)
@@ -417,19 +482,20 @@ void loop()
             delay(2);
             receivedData = receivedData + (char)Serial3.read();
         }
-        Serial.println(receivedData.length());
-        Serial.print("receivedData: ");
-        Serial.println(receivedData);
+        //Serial.println(receivedData.length());
+        //Serial.print("receivedData: ");
+        //Serial.println(receivedData);
 
         char *tempData = receivedData.c_str();
-        if(receivedData.length() == 19){// sometimes the string will receive 3 more chars that not belongs here, we should delete them 
+        if (receivedData.length() == 19)
+        { // sometimes the string will receive 3 more chars that not belongs here, we should delete them
             receivedData = receivedData.substring(0, 4);
         }
-        if ((receivedData.length() == 16)||(receivedData.length() == 17))
+        if ((receivedData.length() == 16) || (receivedData.length() == 17))
         { //Serial.println(receivedData.substring(0, 4).c_str());
 
             city = receivedData.substring(0, 4); //city
-            Serial.println(city);
+            //Serial.println(city);
 
             weather_code = receivedData.substring(4, 6); //weather code
 
@@ -449,10 +515,14 @@ void loop()
         update = false;
 
         //Serial.print(receivedData);
-        if ((signalStrength == "00%")&&(connectionCountdown > 0))
+        if ((signalStrength == "00%") && (connectionCountdown > 0))
         {
-            connectionCountdown --;
-        }else {connectionCountdown = 5;}
+            connectionCountdown--;
+        }
+        else
+        {
+            connectionCountdown = 5;
+        }
     }
     receivedData = "";
     /*
@@ -466,16 +536,22 @@ void loop()
     Wire.requestFrom(8, 3);
 
     */
-# 483 "f:\\WaterArduino\\watering\\watering.ino"
-    Serial.print("receivedData: ");
+# 539 "f:\\WaterArduino\\watering\\watering.ino"
+    /*Serial.print("receivedData: ");
+
     Serial.println(receivedData);
+
     Serial.println("Time: ");
+
     Serial.println(days);
+
     Serial.print("temp: ");
-    Serial.println(weather_code);
+
+    Serial.println(weather_code);*/
+# 545 "f:\\WaterArduino\\watering\\watering.ino"
     receivedData = "";
 
-    if ((millis() - lastDebounceTime) > 500)
+    if ((millis() - lastDebounceTime) > 100)
     {
         debounce = true; //debounce
     }
@@ -507,7 +583,7 @@ void loop()
 
     delay(1000);
 
-    Serial.print("\n Next Round \n");
+    //Serial.print("\n Next Round \n");
 }
 
 void drawMenu()
@@ -587,8 +663,8 @@ void drawMenu()
         u8g2.print(menuItemFor3[currentItemForLastPage]);
         u8g2.drawStr((u8g2.getDisplayWidth() / 2) - ((u8g2.getStrWidth("Twist to adjust") / 2)), 16, "Twist to adjust");
         u8g2.setFont(u8g2_font_unifont_t_symbols); //set fonts
-        u8g2.drawGlyph((u8g2.getDisplayWidth() / 2) - 20, 40, 0x23f4);
-        u8g2.drawGlyph((u8g2.getDisplayWidth() / 2) + u8g2.getStrWidth("0"), 40, 0x23f5);
+        u8g2.drawGlyph((u8g2.getDisplayWidth() / 2) - u8g2.getStrWidth("100"), 40, 0x23f4);
+        u8g2.drawGlyph((u8g2.getDisplayWidth() / 2) + u8g2.getStrWidth("10"), 40, 0x23f5);
         u8g2.setFont(u8g2_font_6x13_tf);
         u8g2.setCursor(((u8g2.getDisplayWidth() / 2) - u8g2.getStrWidth("0") / 2), 40);
         u8g2.print(currentItem);
@@ -698,7 +774,7 @@ void drawHomePage()
 
 void drawWeatherPage()
 {
-    Serial.println("Weather!");
+    //Serial.println("Weather!");
     uint8_t i, h;
 
     u8g2.setFontRefHeightText(); // Ascent will be the ascent of "A" or "1" of the current font. Descent will be the descent "g" of the current font (this is the default after startup).
@@ -893,11 +969,15 @@ void buttonPressed()
 {
     if (debounce)
     {
+
+        //u8g2.setPowerSave(1);
+        //lcdStandbyTime = millis();
         lastDebounceTime = millis();
 
-        Serial.println("Pressed!");
+        //Serial.println("Pressed!");
         if (enterMenu == false) //if not enter the menu, then change the data
         {
+
             if (weatherMenu)
             {
                 weatherMenu = false;
@@ -909,27 +989,34 @@ void buttonPressed()
         }
         else
         {
+
+
+
+            menuStandbyTime = millis();
             switch (currentMenu)
-            { //different number reprensent different menu interface; 1:main menu 2:manual watering 3:record 4:record for each sensor 5:setting 6:setting for differnet sensor 7:adjust menu
+            { //different number reprensent different menu interface; 0:main menu 1:manual watering 2:record 3:record for each sensor 4:setting 5:settings for differnet sensors 6:adjust menu
             case 0: //main menu
                 switch (currentItem)
                 {
                 case 0:
                     currentMenu = 1;
+                    currentItemForLastPage = 0;
                     currentItem = 0;
                     break;
                 case 1:
                     currentMenu = 2;
+                    currentItemForLastPage = 1;
                     currentItem = 0;
                     break;
                 case 2:
                     currentMenu = 4;
+                    currentItemForLastPage = 2;
                     currentItem = 0;
                     break;
                 case 3:
                     currentItem = 0;
                     enterMenu = false;
-                    Serial.print("exit!");
+                    //Serial.print("exit!");
                     break;
                 }
                 break;
@@ -937,9 +1024,9 @@ void buttonPressed()
             case 1: //manual watering
                 if (currentItem == sensors.size())
                 { //back
-                    currentItem = 0;
+                    currentItem = currentItemForLastPage;
                     currentMenu = 0;
-                    Serial.print("back!");
+                    //Serial.print("back!");
                 }
                 else
                 {
@@ -948,20 +1035,25 @@ void buttonPressed()
                 break;
 
             case 2: //settings
+                Serial.println("settings");
                 if (currentItem == sensors.size())
                 {
-                    currentItem = 1;
+
+                    currentItem = currentItemForLastPage;
                     currentMenu = 0;
                 }
                 else
                 {
                     currentMenu = 3; //enter settings menu for each sensor
+                    Serial.println(currentItem);
                     currentItemForLastPage = currentItem;
                     currentItem = 0;
+                    Serial.print(currentItemForLastPage);
+                    Serial.println(currentItem);
                 }
                 break;
 
-            case 3: //setting menu for each sensor
+            case 3://setting menu for each sensor
                 if (currentItem == 4) //back
                 {
                     currentItem = currentItemForLastPage;
@@ -969,16 +1061,32 @@ void buttonPressed()
                 }
                 else
                 {
-                    currentMenu = 6; //enter the settings menu for each sensor
+                    currentMenu = 6; //enter the settings  for each element
+                    sensorID = currentItemForLastPage;
                     currentItemForLastPage = currentItem;
-                    currentItem = 0;
+                    switch (currentItem)
+                    {
+                    case 0:
+                        currentItem = sensors[sensorID].getTempertureLowerLimit();
+                        break;
+                    case 1:
+                        currentItem = sensors[sensorID].getTempertureUpperLimit();
+                        break;
+                    case 2:
+                        currentItem = sensors[sensorID].getHumidityLowerLimit();
+                        break;
+                    case 3:
+                        currentItem = sensors[sensorID].getHumidityUpperLimit();
+                        break;
+                    }
                 }
                 break;
 
             case 4: //records
+
                 if (currentItem == sensors.size())
                 {
-                    currentItem = 5;
+                    currentItem = currentItemForLastPage;
                     currentMenu = 0;
                 }
                 else
@@ -990,36 +1098,41 @@ void buttonPressed()
                 break;
 
             case 5: //records menu for each sensor
-                if (currentItem == 0)
-                {
+               // if (currentItem == 0)
+               // {
                     currentItem = currentItemForLastPage;
                     currentMenu = 4;
-                    sensors[currentItemForLastPage].setRecord(false);
-                }
-                else
-                {
-                    sensors[currentItemForLastPage].setRecord(true);
-                }
+                    //sensors[currentItemForLastPage].setRecord(false);
+                //}
+                //else
+                //{
+                    //sensors[currentItemForLastPage].setRecord(true);
+                //}
                 break;
 
             case 6:
                 currentMenu = 3;
                 switch (currentItemForLastPage)
                 {
+                case 0:
+                    sensors[sensorID].setTempertureLowerLimit(currentItem);
+
+                    Serial.print("sensorID");
+                    Serial.println(sensors[sensorID].getTempertureLowerLimit());
+                    Serial.println(currentItem);
+                    break;
                 case 1:
-                    sensors[currentItemForLastPage].setTempertureLowerLimit(currentItem);
+                    sensors[sensorID].setTempertureUpperLimit(currentItem);
                     break;
                 case 2:
-                    sensors[currentItemForLastPage].setTempertureUpperLimit(currentItem);
+                    sensors[sensorID].setHumidityLowerLimit(currentItem);
                     break;
                 case 3:
-                    sensors[currentItemForLastPage].setHumidityLowerLimit(currentItem);
-                    break;
-                case 4:
-                    sensors[currentItemForLastPage].setHumidityUpperLimit(currentItem);
+                    sensors[sensorID].setHumidityUpperLimit(currentItem);
                     break;
                 }
                 currentItem = currentItemForLastPage;
+                break;
             }
         }
         debounce = false;
@@ -1028,6 +1141,9 @@ void buttonPressed()
 
 void readQuadrature()
 {
+    //u8g2.setPowerSave(1);
+    //lcdStandbyTime = millis();
+    menuStandbyTime = millis();
     if (int_nu == 0 && digitalRead(3 /*has been changed with B, if any bugs appear with encoder, check this*/) == 0x0)
     {
 
@@ -1081,15 +1197,15 @@ void readQuadrature()
                 break;
 
             case 5: //records for each sensors
-                if (currentItem == 0)
+                if (currentItem <= 0)
                     currentItem = 0;
                 else
                     currentItem++;
                 break;
 
             case 6:
-                if (currentItem == 50)
-                    currentItem = 50;
+                if (currentItem >= 99)
+                    currentItem = 99;
                 else
                     currentItem++;
                 break;
@@ -1116,19 +1232,25 @@ void readQuadrature()
 
         Serial.print("Item: ");
         Serial.println(currentItem);
+        Serial.print("Last: ");
+        Serial.println(currentItemForLastPage);
         Serial.print("Menu: ");
         Serial.println(currentMenu);
         Serial.println("--------");
     }
 }
 
-void connection(){
-    Serial.print(connectionCountdown);
+void connection()
+{
+    //Serial.print(connectionCountdown);
 
-    if(connectionCountdown == 0){
+    if (connectionCountdown == 0)
+    {
         ifConnected = false;
         signalStrength = "00%";
-    }else {
+    }
+    else
+    {
         ifConnected = true;
     }
 }
@@ -1142,16 +1264,35 @@ void restMenuData()
 }
 
 void autoWatering()
+
 {
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < sensors.size(); i++)
     {
         int chk = DHT11.read(5 /*define the pin2 is the airTempHumidity sensor*/);
         if (chk == "DHTLIB_OK")
         {
-            if ((sensors[i].getTempertureLowerLimit() < DHT11.temperature) && (sensors[i].getTempertureUpperLimit() > DHT11.temperature) && (sensors[i].getHumidityLowerLimit() < DHT11.humidity) && (sensors[i].getHumidityUpperLimit() > DHT11.humidity))
-            {
-                sensors[i].setWater();
-            }
+        if ((sensors[i].getTempertureLowerLimit() < DHT11.temperature) && (sensors[i].getTempertureUpperLimit() > DHT11.temperature) && (sensors[i].getHumidityLowerLimit() > sensors[i].getCurrentHumidity()))
+        {
+            sensors[i].setWater();
+            //Serial.println("Water");
         }
+        }
+
+    }
+}
+
+void readMoisture()
+{
+    for (int i = 0; i < sensors.size(); i++)
+    {
+        sensors[i].setCurrentHumidity();
+    }
+}
+
+void readSettings()
+{
+    for (int i = 0; i < sensors.size(); i++)
+    {
+        sensors[i].readSavedSettings();
     }
 }
