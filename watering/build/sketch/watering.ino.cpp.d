@@ -51,4 +51,5 @@ f:\WaterArduino\watering\build\sketch\watering.ino.cpp.o: \
  E:\Arduino\libraries\ArduinoSTL\src/iostream \
  E:\Arduino\libraries\ArduinoSTL\src/string_iostream \
  C:\Users\unite\AppData\Local\Arduino15\packages\arduino\hardware\avr\1.8.2\cores\arduino/Stream.h \
+ C:\Users\unite\AppData\Local\Arduino15\packages\arduino\hardware\avr\1.8.2\libraries\EEPROM\src/EEPROM.h \
  C:\Users\unite\AppData\Local\Arduino15\packages\arduino\hardware\avr\1.8.2\libraries\Wire\src/Wire.h

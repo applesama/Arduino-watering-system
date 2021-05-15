@@ -26,6 +26,11 @@
   },
   {
     "Sourcefile": "f:\\WaterArduino\\watering\\build\\sketch\\watering.ino.cpp",
+    "Include": "EEPROM.h",
+    "Includepath": "C:\\Users\\unite\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.2\\libraries\\EEPROM\\src"
+  },
+  {
+    "Sourcefile": "f:\\WaterArduino\\watering\\build\\sketch\\watering.ino.cpp",
     "Include": "Wire.h",
     "Includepath": "C:\\Users\\unite\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.2\\libraries\\Wire\\src"
   },

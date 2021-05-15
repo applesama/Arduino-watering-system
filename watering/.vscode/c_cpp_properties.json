@@ -45,6 +45,7 @@
                 "E:\\Arduino\\libraries\\Dht11",
                 "E:\\Arduino\\libraries\\U8g2\\src",
                 "E:\\Arduino\\libraries\\ArduinoSTL\\src",
+                "C:\\Users\\unite\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.2\\libraries\\EEPROM\\src",
                 "C:\\Users\\unite\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.2\\libraries\\Wire\\src",
                 "C:\\Users\\unite\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.2\\libraries\\SPI\\src",
                 "c:\\users\\unite\\appdata\\local\\arduino15\\packages\\arduino\\tools\\avr-gcc\\7.3.0-atmel3.6.1-arduino5\\lib\\gcc\\avr\\7.3.0\\include",
@@ -558,7 +559,8 @@
                 "__cpp_init_captures=201304",
                 "__ATOMIC_ACQ_REL=4",
                 "__ATOMIC_RELEASE=3",
-                "__BUILTIN_AVR_FMUL=1"
+                "__BUILTIN_AVR_FMUL=1",
+                "USBCON"
             ]
         }
     ]
