@@ -1,7 +1,7 @@
 # Arduino-watering-system
 Arduino Auto-watering &amp; monitoring system
 
-# Arduino automatic watering system Dev
+
 ## Functions
 1. Indoor air temperature & humidity monitoring.
 2. Plants soil moisture monitoring，support up to 4 sensors.
@@ -43,7 +43,7 @@ Arduino Auto-watering &amp; monitoring system
 
 **③** *Voltage would decrease when motor enables, this could influence the accuracy of moisture sensor.*
 
-## Dev
+# Arduino automatic watering system Dev
 ### 1.03
 Fixed the bug about the automatic watering, now the auto-watering can be used, but it relys on the DHT11 sensor, only avaliable when DHT11 is receiving data correctly.
 
