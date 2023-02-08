@@ -41,9 +41,9 @@ NTPClient timeClient(ntpUDP, "ntp1.aliyun.com", 28800); //set time request
 
 const unsigned long HTTP_TIMEOUT = 5000; // max respone time from server
 const size_t MAX_CONTENT_SIZE = 500;     // max size of the HTTP response
-const char *host = "api.seniverse.com";
-const char *APIKEY = "Srr2DuopzZNQwZ9uk"; //API KEY
-const char *city = "Yuxi";
+const char *host = "";
+const char *APIKEY = ""; //API KEY
+const char *city = "";
 const char *language = "en"; //English
 
 int flag = HIGH; //set the light is flase;
